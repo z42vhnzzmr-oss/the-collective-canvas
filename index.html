@@ -2,124 +2,131 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>The Collective Canvas — Human Canvas #001</title>
+<title>The Collective Canvas</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Inter:wght@300;400&display=swap" rel="stylesheet">
 
 <style>
 :root {
-  --bg: #0e0e0e;
-  --text: #f2f2f2;
-  --muted: #9a9a9a;
-  --accent: #eae0d5;
+  --bg: #0b0b0b;
+  --text: #f5f5f5;
+  --muted: #8a8a8a;
+  --accent: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  font-family: Inter, sans-serif;
   background: var(--bg);
   color: var(--text);
+  font-family: Inter, sans-serif;
 }
 
-.container {
-  max-width: 900px;
-  padding: 40px 20px;
+section {
+  max-width: 760px;
   margin: auto;
-}
-
-header {
-  margin-bottom: 80px;
+  padding: 120px 20px;
 }
 
 h1 {
   font-family: "Playfair Display", serif;
-  font-size: 42px;
-  margin: 0;
-}
-
-.subtitle {
-  margin-top: 10px;
-  font-size: 16px;
-  color: var(--muted);
-}
-
-section {
-  margin-bottom: 80px;
+  font-size: 44px;
+  margin: 0 0 40px;
 }
 
 p {
-  line-height: 1.7;
+  font-size: 18px;
+  line-height: 1.8;
+  margin: 0 0 30px;
+}
+
+.whisper {
+  color: var(--muted);
   font-size: 16px;
-  color: #ddd;
 }
 
-.fragments {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px;
+hr {
+  border: none;
+  height: 1px;
+  background: #222;
+  margin: 80px 0;
 }
 
-.card {
-  border: 1px solid #222;
-  padding: 20px;
-}
-
-button {
-  background: transparent;
+.button {
+  display: inline-block;
+  margin-top: 40px;
+  padding: 18px 40px;
   border: 1px solid var(--accent);
   color: var(--accent);
-  padding: 15px 25px;
+  text-decoration: none;
   font-size: 16px;
-  cursor: pointer;
 }
 
-button:hover {
+.button:hover {
   background: var(--accent);
   color: #000;
 }
 
 footer {
+  text-align: center;
   color: var(--muted);
   font-size: 14px;
-  text-align: center;
+  padding-bottom: 60px;
 }
 </style>
 </head>
 
 <body>
 
-<div class="container">
-
-<header>
+<section>
 <h1>The Collective Canvas</h1>
-<div class="subtitle">Human Canvas #001 — A collective abstract artwork</div>
-</header>
 
-<section>
 <p>
-A digital artwork built by humans.  
-Each contribution alters the surface.  
-No one controls the result.
+This is not a platform.<br>
+This is not a product.
 </p>
-</section>
 
-<section>
-<div class="fragments">
-  <div class="card">Micro — 1×1</div>
-  <div class="card">Small — 5×5</div>
-  <div class="card">Medium — 10×10</div>
-  <div class="card">Large — 20×20</div>
-</div>
-<br>
-<button>Participate</button>
+<p>
+It is a surface.<br>
+And it will be shaped by humans.
+</p>
+
+<p class="whisper">
+No names. No logos. No control.
+</p>
+
+<hr>
+
+<p>
+Each contribution adds matter.<br>
+A fragment. A color. A position.
+</p>
+
+<p>
+Alone, meaningless.<br>
+Together, irreversible.
+</p>
+
+<hr>
+
+<p>
+You do not choose the result.<br>
+You choose to be part of it.
+</p>
+
+<a class="button" href="#">
+Participate
+</a>
 </section>
 
 <footer>
-© The Collective Canvas
+Human Canvas #001
 </footer>
-
-</div>
 
 </body>
 </html>
+
