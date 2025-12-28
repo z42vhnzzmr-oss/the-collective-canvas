@@ -5,72 +5,106 @@
 <title>The Collective Canvas</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Inter:wght@300;400&display=swap" rel="stylesheet">
 
 <style>
 :root {
-  --bg: #0f0f10;
-  --text: #f4f4f4;
-  --muted: #8c8c8c;
-  --line: #222;
+  --bg: #0b0b0b;
+  --text: #f5f5f5;
+  --muted: #8a8a8a;
+  --accent: #ffffff;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
   font-family: Inter, sans-serif;
+  animation: breathe 18s ease-in-out infinite;
 }
 
-main {
-  max-width: 880px;
+@keyframes breathe {
+  0% { background-color: #0b0b0b; }
+  50% { background-color: #0f0f0f; }
+  100% { background-color: #0b0b0b; }
+}
+
+section {
+  max-width: 760px;
   margin: auto;
-  padding: 140px 20px 80px;
+  padding: 120px 20px;
+}
+
+h1, p, hr, a {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: reveal 1.2s ease forwards;
+}
+
+h1 { animation-delay: 0.2s; }
+
+p:nth-of-type(1) { animation-delay: 0.8s; }
+p:nth-of-type(2) { animation-delay: 1.6s; }
+p:nth-of-type(3) { animation-delay: 2.4s; }
+p:nth-of-type(4) { animation-delay: 3.6s; }
+p:nth-of-type(5) { animation-delay: 4.4s; }
+
+hr {
+  animation-delay: 3s;
+}
+
+a {
+  animation-delay: 5.2s;
+}
+
+@keyframes reveal {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 h1 {
-  font-family: "Libre Baskerville", serif;
-  font-size: 46px;
-  font-weight: 400;
-  margin-bottom: 60px;
+  font-family: "Playfair Display", serif;
+  font-size: 44px;
+  margin-bottom: 40px;
 }
 
 p {
-  font-size: 17px;
-  line-height: 1.9;
-  margin: 0 0 40px;
+  font-size: 18px;
+  line-height: 1.8;
+  margin-bottom: 30px;
 }
 
-.meta {
+.whisper {
   color: var(--muted);
-  font-size: 15px;
+  font-size: 16px;
 }
 
 hr {
   border: none;
   height: 1px;
-  background: var(--line);
-  margin: 100px 0;
+  background: #222;
+  margin: 80px 0;
 }
 
-.action {
+.button {
   display: inline-block;
   margin-top: 40px;
-  padding: 16px 36px;
-  border: 1px solid var(--text);
-  color: var(--text);
+  padding: 18px 40px;
+  border: 1px solid var(--accent);
+  color: var(--accent);
   text-decoration: none;
-  font-size: 15px;
-  letter-spacing: 0.5px;
+  font-size: 16px;
+  transition: all 0.4s ease;
 }
 
-.action:hover {
-  background: var(--text);
+.button:hover {
+  background: var(--accent);
   color: #000;
+  transform: translateY(-2px);
 }
 
 footer {
@@ -78,52 +112,58 @@ footer {
   color: var(--muted);
   font-size: 14px;
   padding-bottom: 60px;
+  opacity: 0;
+  animation: reveal 1.2s ease forwards;
+  animation-delay: 6s;
 }
 </style>
 </head>
 
 <body>
 
-<main>
-
+<section>
 <h1>The Collective Canvas</h1>
 
 <p>
-A digital surface composed by many.<br>
-Each contribution alters the whole.
+This is not a platform.<br>
+This is not a product.
 </p>
 
 <p>
-No hierarchy.<br>
-No attribution.<br>
-No final author.
+It is a surface.<br>
+And it will be shaped by humans.
 </p>
 
-<p class="meta">
-Human Canvas #001<br>
-Ongoing
+<p class="whisper">
+No names. No logos. No control.
 </p>
 
 <hr>
 
 <p>
-Fragments are added individually.<br>
-They occupy space, color, and position.
+Each contribution adds matter.<br>
+A fragment. A color. A position.
 </p>
 
 <p>
-The final composition cannot be previewed.<br>
-It emerges.
+Alone, meaningless.<br>
+Together, irreversible.
 </p>
 
-<a href="#" class="action">
+<hr>
+
+<p>
+You do not choose the result.<br>
+You choose to be part of it.
+</p>
+
+<a class="button" href="#">
 Participate
 </a>
-
-</main>
+</section>
 
 <footer>
-© The Collective Canvas
+Human Canvas #001
 </footer>
 
 </body>
