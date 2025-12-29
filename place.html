@@ -9,35 +9,23 @@
 body {
   margin: 0;
   background: #0b0b0b;
-  color: #fff;
-  font-family: Inter, sans-serif;
   overflow: hidden;
+  cursor: crosshair;
 }
 
 #ui {
   position: fixed;
   top: 20px;
   left: 20px;
+  color: white;
+  font-family: Inter, sans-serif;
   z-index: 10;
-}
-
-#counter {
   font-size: 14px;
   opacity: 0.8;
-  margin-bottom: 10px;
-}
-
-input[type="color"] {
-  width: 40px;
-  height: 40px;
-  border: none;
-  background: none;
-  cursor: pointer;
 }
 
 canvas {
   display: block;
-  cursor: crosshair;
 }
 </style>
 </head>
@@ -45,8 +33,7 @@ canvas {
 <body>
 
 <div id="ui">
-  <div id="counter">Pixels remaining: <strong id="remaining">10</strong></div>
-  <input type="color" id="colorPicker" value="#ffffff">
+  Pixels remaining: <span id="remaining">10</span>
 </div>
 
 <canvas id="canvas"></canvas>
@@ -57,54 +44,63 @@ const ctx = canvas.getContext("2d");
 
 const SIZE = 1000;
 let pixelsRemaining = 10;
-let color = "#ffffff";
+let scale = 8; // zoom factor
+let mouse = { x: 0, y: 0 };
 
-canvas.width = SIZE;
-canvas.height = SIZE;
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-// Resize canvas to screen
-function resize() {
-  canvas.style.width = window.innerWidth + "px";
-  canvas.style.height = window.innerHeight + "px";
-}
-resize();
-window.addEventListener("resize", resize);
+const offscreen = document.createElement("canvas");
+offscreen.width = SIZE;
+offscreen.height = SIZE;
+const offctx = offscreen.getContext("2d");
 
-// Fill background
-ctx.fillStyle = "#0b0b0b";
-ctx.fillRect(0, 0, SIZE, SIZE);
+// background
+offctx.fillStyle = "#0b0b0b";
+offctx.fillRect(0, 0, SIZE, SIZE);
 
-// Color picker
-document.getElementById("colorPicker").addEventListener("input", e => {
-  color = e.target.value;
+// mouse tracking
+canvas.addEventListener("mousemove", e => {
+  mouse.x = e.clientX;
+  mouse.y = e.clientY;
+  draw();
 });
 
-// Draw pixel
-canvas.addEventListener("click", e => {
+// click to place pixel
+canvas.addEventListener("click", () => {
   if (pixelsRemaining <= 0) return;
 
-  const rect = canvas.getBoundingClientRect();
-  const x = Math.floor((e.clientX - rect.left) / rect.width * SIZE);
-  const y = Math.floor((e.clientY - rect.top) / rect.height * SIZE);
+  const px = Math.floor(mouse.x / scale);
+  const py = Math.floor(mouse.y / scale);
 
-  ctx.fillStyle = color;
-  ctx.fillRect(x, y, 1, 1);
+  offctx.fillStyle = "#ffffff";
+  offctx.fillRect(px, py, 1, 1);
 
   pixelsRemaining--;
   document.getElementById("remaining").textContent = pixelsRemaining;
+  draw();
 });
 
-// Simple zoom (wheel)
-let scale = 1;
-canvas.addEventListener("wheel", e => {
-  e.preventDefault();
-  scale += e.deltaY * -0.001;
-  scale = Math.min(Math.max(1, scale), 20);
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  canvas.style.transform = `scale(${scale})`;
-});
+  // draw zoomed canvas
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(
+    offscreen,
+    0, 0, SIZE, SIZE,
+    0, 0, SIZE * scale, SIZE * scale
+  );
+
+  // loupe
+  ctx.beginPath();
+  ctx.arc(mouse.x, mouse.y, 60, 0, Math.PI * 2);
+  ctx.strokeStyle = "rgba(255,255,255,0.8)";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+draw();
 </script>
 
 </body>
 </html>
-
