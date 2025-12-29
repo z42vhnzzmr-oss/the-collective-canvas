@@ -2,322 +2,265 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>The Collective Canvas — Place</title>
+<title>Place your fragment — The Collective Canvas</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link href="https://fonts.googleapis.com/css2?family=Didot&family=Inter:wght@300;400&display=swap" rel="stylesheet">
 
 <style>
-html, body {
-  margin: 0;
-  background: #0b0b0b;
-  overflow: hidden;
-  font-family: Inter, sans-serif;
+:root{
+  --bg:#0b0b0b;
+  --text:#f5f5f5;
+  --muted:#8a8a8a;
+  --border:#2a2a2a;
 }
 
-/* ================= UI ================= */
-#ui {
-  position: fixed;
-  top: 24px;
-  left: 24px;
-  z-index: 20;
-  background: rgba(0,0,0,0.65);
-  border: 1px solid rgba(255,255,255,0.25);
-  padding: 18px;
-  border-radius: 14px;
-  color: white;
-  backdrop-filter: blur(10px);
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Inter,sans-serif;
+  display:flex;
+  justify-content:center;
 }
 
-#ui h3 {
-  margin: 0 0 8px;
-  font-size: 11px;
-  letter-spacing: 1px;
-  opacity: 0.7;
-  text-transform: uppercase;
+main{
+  display:flex;
+  gap:40px;
+  padding:40px;
 }
 
-#remaining {
-  font-size: 22px;
-  margin-bottom: 14px;
-  transition: transform 0.25s ease;
+/* LEFT PANEL */
+aside{
+  width:260px;
 }
 
-#remaining.bump {
-  transform: scale(1.15);
+h1{
+  font-family:Didot,serif;
+  font-size:28px;
+  margin-bottom:10px;
 }
 
-#colorPicker {
-  width: 56px;
-  height: 56px;
-  border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.6);
-  background: none;
-  cursor: pointer;
+p{
+  font-size:14px;
+  color:var(--muted);
+  line-height:1.6;
 }
 
-#activeColor {
-  margin-top: 8px;
-  width: 56px;
-  height: 10px;
-  border-radius: 5px;
+.counter{
+  margin:20px 0;
+  font-size:16px;
 }
 
-/* Validation button */
-#validate {
-  margin-top: 16px;
-  padding: 10px 18px;
-  border: 1px solid rgba(255,255,255,0.7);
-  background: transparent;
-  color: white;
-  font-size: 13px;
-  cursor: pointer;
-  display: none;
-  opacity: 0;
-  transform: translateY(6px);
-  transition: opacity 0.25s ease, transform 0.25s ease;
-}
-#validate.show {
-  display: block;
-  opacity: 1;
-  transform: translateY(0);
-}
-#validate:hover {
-  background: white;
-  color: black;
+.palette{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:10px;
+  margin-top:20px;
 }
 
-/* ================= CANVAS ================= */
-#container {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.color{
+  width:36px;
+  height:36px;
+  border-radius:50%;
+  cursor:pointer;
+  border:2px solid transparent;
 }
 
-#main {
-  image-rendering: pixelated;
-  background: #000;
-  transform: scale(0.75);
+.color.active{
+  border-color:#fff;
+  transform:scale(1.1);
 }
 
-/* ================= LOUPE ================= */
-#loupe {
-  position: fixed;
-  width: 140px;
-  height: 140px;
-  border-radius: 50%;
-  border: 1px solid rgba(255,255,255,0.8);
-  pointer-events: none;
-  overflow: hidden;
-  z-index: 15;
-  display: none;
+/* CANVAS AREA */
+.canvas-wrapper{
+  position:relative;
 }
 
-#zoom {
-  image-rendering: pixelated;
+.frame{
+  width:600px;
+  height:600px;
+  border:1px solid var(--border);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#000;
+  box-shadow:0 0 40px rgba(255,255,255,0.03);
 }
 
-/* ultra-fin reticle */
-#loupe::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(#fff,#fff) center/1px 100%,
-    linear-gradient(#fff,#fff) center/100% 1px;
-  background-repeat: no-repeat;
-  opacity: 0.5;
+canvas{
+  width:1000px;
+  height:1000px;
+  image-rendering:pixelated;
+}
+
+/* LOUPE */
+.loupe{
+  position:absolute;
+  width:160px;
+  height:160px;
+  border-radius:50%;
+  border:1px solid #fff;
+  pointer-events:none;
+  overflow:hidden;
+  transform:translate(-50%,-50%);
+  display:none;
+}
+
+.loupe canvas{
+  position:absolute;
+  width:2000px;
+  height:2000px;
+}
+
+/* POINTER */
+.pointer{
+  position:absolute;
+  width:6px;
+  height:6px;
+  border:1px solid #fff;
+  border-radius:50%;
+  pointer-events:none;
+}
+
+/* VALIDATION */
+.validate{
+  margin-top:20px;
+  padding:14px;
+  border:1px solid #fff;
+  text-align:center;
+  cursor:pointer;
+  opacity:0.4;
+  transition:0.3s;
+}
+
+.validate.active{
+  opacity:1;
 }
 </style>
 </head>
 
 <body>
 
-<!-- UI -->
-<div id="ui">
-  <h3>Pixels remaining</h3>
-  <div id="remaining">20</div>
+<main>
 
-  <h3>Color</h3>
-  <input type="color" id="colorPicker" value="#ffffff">
-  <div id="activeColor"></div>
+<aside>
+<h1>Your presence</h1>
 
-  <button id="validate">Validate this mark</button>
+<p>
+Each fragment is irreversible.<br>
+Once placed, it remains.
+</p>
+
+<div class="counter">
+Fragments remaining: <strong id="count">5</strong>
 </div>
 
-<!-- Canvas -->
-<div id="container">
-  <canvas id="main" width="1000" height="1000"></canvas>
+<p><em>Choose a color</em></p>
+
+<div class="palette" id="palette"></div>
+
+<div class="validate" id="validate">
+Validate fragment
 </div>
 
-<!-- Loupe -->
-<div id="loupe">
-  <canvas id="zoom" width="140" height="140"></canvas>
+<p style="margin-top:20px;font-size:12px;">
+Most contributors return later.
+</p>
+</aside>
+
+<div class="canvas-wrapper">
+<div class="frame" id="frame">
+<canvas id="canvas" width="1000" height="1000"></canvas>
 </div>
+
+<div class="loupe" id="loupe">
+<canvas id="zoom" width="2000" height="2000"></canvas>
+<div class="pointer"></div>
+</div>
+</div>
+
+</main>
 
 <script>
-/* ================= CONFIG ================= */
-const SIZE = 1000;
-const SCALE = 0.75;
-let remaining = 20;
-let currentColor = "#ffffff";
+const canvas=document.getElementById("canvas");
+const ctx=canvas.getContext("2d");
+const loupe=document.getElementById("loupe");
+const zoom=document.getElementById("zoom");
+const zctx=zoom.getContext("2d");
+const pointer=document.querySelector(".pointer");
+const frame=document.getElementById("frame");
+const validate=document.getElementById("validate");
+const countEl=document.getElementById("count");
 
-/* ================= CANVAS ================= */
-const canvas = document.getElementById("main");
-const ctx = canvas.getContext("2d");
+let remaining=5;
+let currentColor="#ffffff";
+let tempPixel=null;
 
-const art = document.createElement("canvas");
-art.width = SIZE;
-art.height = SIZE;
-const artCtx = art.getContext("2d");
-artCtx.fillStyle = "#000";
-artCtx.fillRect(0,0,SIZE,SIZE);
+/* PALETTE */
+const colors=["#ffffff","#ff3b3b","#ffd93d","#3bff8f","#3bc7ff","#9b59ff","#ff7bd8"];
+const palette=document.getElementById("palette");
 
-const locked = new Set();
-
-/* ================= UI ================= */
-const remainingEl = document.getElementById("remaining");
-const picker = document.getElementById("colorPicker");
-const activeColor = document.getElementById("activeColor");
-const validateBtn = document.getElementById("validate");
-
-activeColor.style.background = currentColor;
-
-picker.addEventListener("input", e => {
-  currentColor = e.target.value;
-  activeColor.style.background = currentColor;
+colors.forEach(c=>{
+  const d=document.createElement("div");
+  d.className="color";
+  d.style.background=c;
+  d.onclick=()=>{
+    document.querySelectorAll(".color").forEach(x=>x.classList.remove("active"));
+    d.classList.add("active");
+    currentColor=c;
+  };
+  palette.appendChild(d);
 });
+palette.firstChild.classList.add("active");
 
-/* ================= LOUPE ================= */
-const loupe = document.getElementById("loupe");
-const zoom = document.getElementById("zoom");
-const zoomCtx = zoom.getContext("2d");
+/* MOUSE */
+frame.addEventListener("mousemove",e=>{
+  const rect=frame.getBoundingClientRect();
+  const x=e.clientX-rect.left;
+  const y=e.clientY-rect.top;
 
-/* ================= STATE ================= */
-let mouseX = 0;
-let mouseY = 0;
-let insideCanvas = false;
-let pendingPixel = null;
-let pulse = null;
-
-/* ================= MOUSE ================= */
-window.addEventListener("mousemove", e => {
-  mouseX = e.clientX;
-  mouseY = e.clientY;
-
-  const rect = canvas.getBoundingClientRect();
-  insideCanvas =
-    mouseX >= rect.left &&
-    mouseX <= rect.right &&
-    mouseY >= rect.top &&
-    mouseY <= rect.bottom;
-
-  if (insideCanvas) {
-    loupe.style.display = "block";
-    loupe.style.left = mouseX + 12 + "px";
-    loupe.style.top = mouseY + 12 + "px";
-  } else {
-    loupe.style.display = "none";
+  if(x<0||y<0||x>rect.width||y>rect.height){
+    loupe.style.display="none";
+    return;
   }
+
+  loupe.style.display="block";
+  loupe.style.left=e.clientX+"px";
+  loupe.style.top=e.clientY+"px";
+
+  const cx=Math.floor(x/rect.width*1000);
+  const cy=Math.floor(y/rect.height*1000);
+
+  zctx.clearRect(0,0,2000,2000);
+  zctx.imageSmoothingEnabled=false;
+  zctx.drawImage(canvas,-cx*2+80,-cy*2+80);
+
+  pointer.style.left="50%";
+  pointer.style.top="50%";
+
+  tempPixel={x:cx,y:cy};
 });
 
-/* ================= CLICK ================= */
-canvas.addEventListener("mousedown", e => {
-  if (!insideCanvas || remaining <= 0) return;
-
-  const rect = canvas.getBoundingClientRect();
-  const x = Math.floor((e.clientX - rect.left) / SCALE);
-  const y = Math.floor((e.clientY - rect.top) / SCALE);
-  const key = `${x},${y}`;
-
-  if (locked.has(key)) return;
-
-  pendingPixel = { x, y, color: currentColor };
-  validateBtn.classList.add("show");
+frame.addEventListener("click",()=>{
+  if(!tempPixel||remaining<=0)return;
+  ctx.fillStyle=currentColor;
+  ctx.fillRect(tempPixel.x,tempPixel.y,1,1);
+  validate.classList.add("active");
 });
 
-/* ================= VALIDATE ================= */
-validateBtn.addEventListener("click", () => {
-  if (!pendingPixel) return;
-
-  const { x, y, color } = pendingPixel;
-  const key = `${x},${y}`;
-
-  artCtx.fillStyle = color;
-  artCtx.fillRect(x, y, 1, 1);
-  locked.add(key);
-
-  pulse = { x, y, t: 0 };
-  pendingPixel = null;
-
+/* VALIDATE */
+validate.onclick=()=>{
+  if(!validate.classList.contains("active"))return;
   remaining--;
-  remainingEl.textContent = remaining;
-  remainingEl.classList.add("bump");
-  setTimeout(() => remainingEl.classList.remove("bump"), 250);
+  countEl.textContent=remaining;
+  validate.classList.remove("active");
+  tempPixel=null;
 
-  validateBtn.classList.remove("show");
-});
-
-/* ================= DRAW ================= */
-function draw() {
-  ctx.clearRect(0,0,SIZE,SIZE);
-  ctx.drawImage(art,0,0);
-
-  /* preview */
-  if (pendingPixel) {
-    ctx.fillStyle = pendingPixel.color;
-    ctx.globalAlpha = 0.6;
-    ctx.fillRect(pendingPixel.x, pendingPixel.y, 1, 1);
-    ctx.globalAlpha = 1;
+  if(remaining===1){
+    alert("One fragment remains.");
   }
-
-  /* pulse */
-  if (pulse) {
-    pulse.t += 0.05;
-    ctx.strokeStyle = `rgba(255,255,255,${1 - pulse.t})`;
-    ctx.lineWidth = 1;
-    ctx.strokeRect(
-      pulse.x - pulse.t,
-      pulse.y - pulse.t,
-      1 + pulse.t * 2,
-      1 + pulse.t * 2
-    );
-    if (pulse.t >= 1) pulse = null;
-  }
-
-  /* frame */
-  ctx.strokeStyle = "rgba(255,255,255,0.8)";
-  ctx.lineWidth = 1;
-  ctx.strokeRect(0,0,SIZE,SIZE);
-}
-
-/* ================= LOOP ================= */
-function loop() {
-  draw();
-
-  if (insideCanvas) {
-    const rect = canvas.getBoundingClientRect();
-    const cx = Math.floor((mouseX - rect.left) / SCALE);
-    const cy = Math.floor((mouseY - rect.top) / SCALE);
-
-    zoomCtx.imageSmoothingEnabled = false;
-    zoomCtx.clearRect(0,0,140,140);
-    zoomCtx.drawImage(
-      art,
-      cx - 10, cy - 10,
-      20, 20,
-      0, 0,
-      140, 140
-    );
-
-    zoomCtx.strokeStyle = "rgba(255,255,255,0.8)";
-    zoomCtx.lineWidth = 1;
-    zoomCtx.strokeRect(0,0,140,140);
-  }
-
-  requestAnimationFrame(loop);
-}
-
-loop();
+};
 </script>
 
 </body>
