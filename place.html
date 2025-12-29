@@ -46,12 +46,12 @@ canvas {
   <input type="color" id="colorPicker" value="#ffffff">
 </div>
 
-<canvas id="canvas"></canvas>
+<canvas id="screen"></canvas>
 
 <script>
 /* ===== CONFIG ===== */
 const GRID_SIZE = 1000;
-const ZOOM = 10;
+const ZOOM = 8;
 const LOUPE_RADIUS = 70;
 
 /* ===== STATE ===== */
@@ -59,14 +59,14 @@ let pixelsRemaining = 20;
 let currentColor = "#ffffff";
 let mouse = { x: 0, y: 0, down: false };
 
-/* ===== CANVAS SETUP ===== */
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
+/* ===== CANVAS ===== */
+const screen = document.getElementById("screen");
+const ctx = screen.getContext("2d");
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+screen.width = window.innerWidth;
+screen.height = window.innerHeight;
 
-/* Offscreen canvas = vraie œuvre */
+/* ===== ART CANVAS ===== */
 const art = document.createElement("canvas");
 art.width = GRID_SIZE;
 art.height = GRID_SIZE;
@@ -75,37 +75,60 @@ const artCtx = art.getContext("2d");
 artCtx.fillStyle = "#0b0b0b";
 artCtx.fillRect(0, 0, GRID_SIZE, GRID_SIZE);
 
+/* ===== CENTER ART ===== */
+function artPosition() {
+  const w = GRID_SIZE * ZOOM;
+  const h = GRID_SIZE * ZOOM;
+  return {
+    x: (screen.width - w) / 2,
+    y: (screen.height - h) / 2
+  };
+}
+
 /* ===== UI ===== */
 document.getElementById("colorPicker").addEventListener("input", e => {
   currentColor = e.target.value;
 });
 
 /* ===== EVENTS ===== */
-canvas.addEventListener("mousemove", e => {
+screen.addEventListener("mousemove", e => {
   mouse.x = e.clientX;
   mouse.y = e.clientY;
   if (mouse.down) placePixel();
   draw();
 });
 
-canvas.addEventListener("mousedown", () => mouse.down = true);
-canvas.addEventListener("mouseup", () => mouse.down = false);
-canvas.addEventListener("mouseleave", () => mouse.down = false);
+screen.addEventListener("mousedown", () => mouse.down = true);
+screen.addEventListener("mouseup", () => mouse.down = false);
+screen.addEventListener("mouseleave", () => mouse.down = false);
 
-canvas.addEventListener("click", placePixel);
+screen.addEventListener("click", placePixel);
 
 window.addEventListener("resize", () => {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  screen.width = window.innerWidth;
+  screen.height = window.innerHeight;
   draw();
 });
+
+/* ===== HELPERS ===== */
+function isInsideArt(mx, my) {
+  const pos = artPosition();
+  return (
+    mx >= pos.x &&
+    my >= pos.y &&
+    mx <= pos.x + GRID_SIZE * ZOOM &&
+    my <= pos.y + GRID_SIZE * ZOOM
+  );
+}
 
 /* ===== CORE ===== */
 function placePixel() {
   if (pixelsRemaining <= 0) return;
+  if (!isInsideArt(mouse.x, mouse.y)) return;
 
-  const px = Math.floor(mouse.x / ZOOM);
-  const py = Math.floor(mouse.y / ZOOM);
+  const pos = artPosition();
+  const px = Math.floor((mouse.x - pos.x) / ZOOM);
+  const py = Math.floor((mouse.y - pos.y) / ZOOM);
 
   if (px < 0 || py < 0 || px >= GRID_SIZE || py >= GRID_SIZE) return;
 
@@ -118,41 +141,57 @@ function placePixel() {
 
 /* ===== DRAW ===== */
 function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0, 0, screen.width, screen.height);
 
+  const pos = artPosition();
+
+  // Draw artwork
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(
     art,
-    0, 0, GRID_SIZE, GRID_SIZE,
-    0, 0, GRID_SIZE * ZOOM, GRID_SIZE * ZOOM
+    pos.x, pos.y,
+    GRID_SIZE * ZOOM,
+    GRID_SIZE * ZOOM
   );
 
-  // Loupe
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(mouse.x, mouse.y, LOUPE_RADIUS, 0, Math.PI * 2);
-  ctx.clip();
-
-  ctx.drawImage(
-    art,
-    Math.floor(mouse.x / ZOOM) - 10,
-    Math.floor(mouse.y / ZOOM) - 10,
-    20, 20,
-    mouse.x - LOUPE_RADIUS,
-    mouse.y - LOUPE_RADIUS,
-    LOUPE_RADIUS * 2,
-    LOUPE_RADIUS * 2
-  );
-  ctx.restore();
-
-  // Loupe border + glow
-  ctx.beginPath();
-  ctx.arc(mouse.x, mouse.y, LOUPE_RADIUS, 0, Math.PI * 2);
-  ctx.strokeStyle = "rgba(255,255,255,0.9)";
+  // Frame
+  ctx.strokeStyle = "rgba(255,255,255,0.3)";
   ctx.lineWidth = 2;
-  ctx.shadowColor = "rgba(255,255,255,0.4)";
-  ctx.shadowBlur = 12;
-  ctx.stroke();
+  ctx.strokeRect(
+    pos.x, pos.y,
+    GRID_SIZE * ZOOM,
+    GRID_SIZE * ZOOM
+  );
+
+  // Loupe only inside art
+  if (isInsideArt(mouse.x, mouse.y)) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(mouse.x, mouse.y, LOUPE_RADIUS, 0, Math.PI * 2);
+    ctx.clip();
+
+    const px = Math.floor((mouse.x - pos.x) / ZOOM);
+    const py = Math.floor((mouse.y - pos.y) / ZOOM);
+
+    ctx.drawImage(
+      art,
+      px - 10, py - 10, 20, 20,
+      mouse.x - LOUPE_RADIUS,
+      mouse.y - LOUPE_RADIUS,
+      LOUPE_RADIUS * 2,
+      LOUPE_RADIUS * 2
+    );
+    ctx.restore();
+
+    // Loupe border
+    ctx.beginPath();
+    ctx.arc(mouse.x, mouse.y, LOUPE_RADIUS, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255,255,255,0.9)";
+    ctx.lineWidth = 2;
+    ctx.shadowColor = "rgba(255,255,255,0.4)";
+    ctx.shadowBlur = 10;
+    ctx.stroke();
+  }
 }
 
 /* ===== INIT ===== */
