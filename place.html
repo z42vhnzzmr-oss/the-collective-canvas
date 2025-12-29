@@ -1,16 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8">
 <title>The Collective Canvas — Place</title>
 
 <style>
 html, body {
   margin: 0;
-  padding: 0;
   background: #0b0b0b;
   overflow: hidden;
-  cursor: none;
   font-family: Inter, sans-serif;
 }
 
@@ -19,7 +17,7 @@ html, body {
   position: fixed;
   top: 24px;
   left: 24px;
-  z-index: 10;
+  z-index: 20;
   background: rgba(0,0,0,0.7);
   border: 1px solid rgba(255,255,255,0.25);
   padding: 16px;
@@ -45,7 +43,7 @@ html, body {
   width: 56px;
   height: 56px;
   border-radius: 8px;
-  border: 2px solid rgba(255,255,255,0.7);
+  border: 2px solid rgba(255,255,255,0.8);
   background: none;
   cursor: pointer;
 }
@@ -66,8 +64,9 @@ html, body {
   justify-content: center;
 }
 
-canvas {
+#main {
   image-rendering: pixelated;
+  background: #000;
 }
 
 /* ================= LOUPE ================= */
@@ -76,10 +75,27 @@ canvas {
   width: 140px;
   height: 140px;
   border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.8);
+  border: 2px solid rgba(255,255,255,0.9);
   pointer-events: none;
   overflow: hidden;
-  z-index: 9;
+  z-index: 15;
+  display: none;
+}
+
+#zoom {
+  image-rendering: pixelated;
+}
+
+/* Réticule */
+#loupe::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(#fff,#fff) center/2px 100%,
+    linear-gradient(#fff,#fff) center/100% 2px;
+  background-repeat: no-repeat;
+  opacity: 0.8;
 }
 </style>
 </head>
@@ -98,7 +114,7 @@ canvas {
 
 <!-- Canvas -->
 <div id="container">
-  <canvas id="main"></canvas>
+  <canvas id="main" width="1000" height="1000"></canvas>
 </div>
 
 <!-- Loupe -->
@@ -108,9 +124,7 @@ canvas {
 
 <script>
 /* ================= CONFIG ================= */
-const GRID_SIZE = 1000;
-const PIXEL_SIZE = 1;
-const ZOOM = 1;
+const SIZE = 1000;
 let remaining = 20;
 let currentColor = "#ffffff";
 
@@ -118,25 +132,17 @@ let currentColor = "#ffffff";
 const canvas = document.getElementById("main");
 const ctx = canvas.getContext("2d");
 
-canvas.width = GRID_SIZE;
-canvas.height = GRID_SIZE;
-
 const art = document.createElement("canvas");
-art.width = GRID_SIZE;
-art.height = GRID_SIZE;
+art.width = SIZE;
+art.height = SIZE;
 const artCtx = art.getContext("2d");
 artCtx.fillStyle = "#000";
-artCtx.fillRect(0, 0, GRID_SIZE, GRID_SIZE);
-
-/* ================= POSITION ================= */
-const container = document.getElementById("container");
-let rect;
+artCtx.fillRect(0,0,SIZE,SIZE);
 
 /* ================= UI ================= */
 const remainingEl = document.getElementById("remaining");
 const picker = document.getElementById("colorPicker");
 const activeColor = document.getElementById("activeColor");
-
 activeColor.style.background = currentColor;
 
 picker.addEventListener("input", e => {
@@ -149,38 +155,42 @@ const loupe = document.getElementById("loupe");
 const zoom = document.getElementById("zoom");
 const zoomCtx = zoom.getContext("2d");
 
-/* ================= MOUSE ================= */
+/* ================= STATE ================= */
 let mouseX = 0;
 let mouseY = 0;
+let insideCanvas = false;
 
+/* ================= MOUSE MOVE ================= */
 window.addEventListener("mousemove", e => {
   mouseX = e.clientX;
   mouseY = e.clientY;
 
-  loupe.style.left = mouseX + 20 + "px";
-  loupe.style.top = mouseY + 20 + "px";
+  const rect = canvas.getBoundingClientRect();
+
+  insideCanvas =
+    mouseX >= rect.left &&
+    mouseX <= rect.right &&
+    mouseY >= rect.top &&
+    mouseY <= rect.bottom;
+
+  if (insideCanvas) {
+    canvas.style.cursor = "none";
+    loupe.style.display = "block";
+    loupe.style.left = mouseX + 20 + "px";
+    loupe.style.top = mouseY + 20 + "px";
+  } else {
+    canvas.style.cursor = "default";
+    loupe.style.display = "none";
+  }
 });
-
-/* ================= DRAW ================= */
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(art, 0, 0);
-
-  // Cadre visible
-  ctx.strokeStyle = "rgba(255,255,255,0.9)";
-  ctx.lineWidth = 2;
-  ctx.strokeRect(0, 0, GRID_SIZE, GRID_SIZE);
-}
 
 /* ================= CLICK ================= */
 canvas.addEventListener("mousedown", e => {
-  rect = canvas.getBoundingClientRect();
+  if (!insideCanvas || remaining <= 0) return;
 
-  const x = Math.floor((e.clientX - rect.left));
-  const y = Math.floor((e.clientY - rect.top));
-
-  if (x < 0 || y < 0 || x >= GRID_SIZE || y >= GRID_SIZE) return;
-  if (remaining <= 0) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.floor(e.clientX - rect.left);
+  const y = Math.floor(e.clientY - rect.top);
 
   artCtx.fillStyle = currentColor;
   artCtx.fillRect(x, y, 1, 1);
@@ -189,21 +199,35 @@ canvas.addEventListener("mousedown", e => {
   remainingEl.textContent = remaining;
 });
 
+/* ================= DRAW ================= */
+function draw() {
+  ctx.drawImage(art, 0, 0);
+
+  // Cadre clair
+  ctx.strokeStyle = "rgba(255,255,255,0.9)";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(0, 0, SIZE, SIZE);
+}
+
 /* ================= LOOP ================= */
 function loop() {
   draw();
 
-  // Loupe render
-  zoomCtx.imageSmoothingEnabled = false;
-  zoomCtx.clearRect(0, 0, 140, 140);
-  zoomCtx.drawImage(
-    art,
-    mouseX - rect?.left - 10,
-    mouseY - rect?.top - 10,
-    20, 20,
-    0, 0,
-    140, 140
-  );
+  if (insideCanvas) {
+    const rect = canvas.getBoundingClientRect();
+    const cx = Math.floor(mouseX - rect.left);
+    const cy = Math.floor(mouseY - rect.top);
+
+    zoomCtx.imageSmoothingEnabled = false;
+    zoomCtx.clearRect(0,0,140,140);
+    zoomCtx.drawImage(
+      art,
+      cx - 10, cy - 10,
+      20, 20,
+      0, 0,
+      140, 140
+    );
+  }
 
   requestAnimationFrame(loop);
 }
