@@ -1,203 +1,215 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Place — The Collective Canvas</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8" />
+<title>The Collective Canvas — Place</title>
 
 <style>
 html, body {
   margin: 0;
+  padding: 0;
   background: #0b0b0b;
   overflow: hidden;
   cursor: none;
   font-family: Inter, sans-serif;
 }
 
+/* ================= UI ================= */
 #ui {
   position: fixed;
-  top: 20px;
-  left: 20px;
+  top: 24px;
+  left: 24px;
   z-index: 10;
-  color: #fff;
-  font-size: 14px;
-  opacity: 0.85;
+  background: rgba(0,0,0,0.7);
+  border: 1px solid rgba(255,255,255,0.25);
+  padding: 16px;
+  border-radius: 12px;
+  color: white;
+  backdrop-filter: blur(8px);
 }
 
-#ui input {
-  margin-top: 10px;
-  width: 40px;
-  height: 40px;
-  border: none;
+#ui h3 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  opacity: 0.7;
+  text-transform: uppercase;
+}
+
+#remaining {
+  font-size: 20px;
+  margin-bottom: 12px;
+}
+
+#colorPicker {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  border: 2px solid rgba(255,255,255,0.7);
   background: none;
   cursor: pointer;
 }
 
+#activeColor {
+  margin-top: 8px;
+  width: 56px;
+  height: 12px;
+  border-radius: 6px;
+}
+
+/* ================= CANVAS ================= */
+#container {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 canvas {
-  display: block;
+  image-rendering: pixelated;
+}
+
+/* ================= LOUPE ================= */
+#loupe {
+  position: fixed;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.8);
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 9;
 }
 </style>
 </head>
 
 <body>
 
+<!-- UI -->
 <div id="ui">
-  Pixels remaining: <strong id="remaining">20</strong><br>
+  <h3>Pixels disponibles</h3>
+  <div id="remaining">20</div>
+
+  <h3>Choisir une couleur</h3>
   <input type="color" id="colorPicker" value="#ffffff">
+  <div id="activeColor"></div>
 </div>
 
-<canvas id="screen"></canvas>
+<!-- Canvas -->
+<div id="container">
+  <canvas id="main"></canvas>
+</div>
+
+<!-- Loupe -->
+<div id="loupe">
+  <canvas id="zoom" width="140" height="140"></canvas>
+</div>
 
 <script>
-/* ===== CONFIG ===== */
+/* ================= CONFIG ================= */
 const GRID_SIZE = 1000;
-const ZOOM = 8;
-const LOUPE_RADIUS = 70;
-
-/* ===== STATE ===== */
-let pixelsRemaining = 20;
+const PIXEL_SIZE = 1;
+const ZOOM = 1;
+let remaining = 20;
 let currentColor = "#ffffff";
-let mouse = { x: 0, y: 0, down: false };
 
-/* ===== CANVAS ===== */
-const screen = document.getElementById("screen");
-const ctx = screen.getContext("2d");
+/* ================= CANVAS ================= */
+const canvas = document.getElementById("main");
+const ctx = canvas.getContext("2d");
 
-screen.width = window.innerWidth;
-screen.height = window.innerHeight;
+canvas.width = GRID_SIZE;
+canvas.height = GRID_SIZE;
 
-/* ===== ART CANVAS ===== */
 const art = document.createElement("canvas");
 art.width = GRID_SIZE;
 art.height = GRID_SIZE;
 const artCtx = art.getContext("2d");
-
-artCtx.fillStyle = "#0b0b0b";
+artCtx.fillStyle = "#000";
 artCtx.fillRect(0, 0, GRID_SIZE, GRID_SIZE);
 
-/* ===== CENTER ART ===== */
-function artPosition() {
-  const w = GRID_SIZE * ZOOM;
-  const h = GRID_SIZE * ZOOM;
-  return {
-    x: (screen.width - w) / 2,
-    y: (screen.height - h) / 2
-  };
-}
+/* ================= POSITION ================= */
+const container = document.getElementById("container");
+let rect;
 
-/* ===== UI ===== */
-document.getElementById("colorPicker").addEventListener("input", e => {
+/* ================= UI ================= */
+const remainingEl = document.getElementById("remaining");
+const picker = document.getElementById("colorPicker");
+const activeColor = document.getElementById("activeColor");
+
+activeColor.style.background = currentColor;
+
+picker.addEventListener("input", e => {
   currentColor = e.target.value;
+  activeColor.style.background = currentColor;
 });
 
-/* ===== EVENTS ===== */
-screen.addEventListener("mousemove", e => {
-  mouse.x = e.clientX;
-  mouse.y = e.clientY;
-  if (mouse.down) placePixel();
-  draw();
+/* ================= LOUPE ================= */
+const loupe = document.getElementById("loupe");
+const zoom = document.getElementById("zoom");
+const zoomCtx = zoom.getContext("2d");
+
+/* ================= MOUSE ================= */
+let mouseX = 0;
+let mouseY = 0;
+
+window.addEventListener("mousemove", e => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+
+  loupe.style.left = mouseX + 20 + "px";
+  loupe.style.top = mouseY + 20 + "px";
 });
 
-screen.addEventListener("mousedown", () => mouse.down = true);
-screen.addEventListener("mouseup", () => mouse.down = false);
-screen.addEventListener("mouseleave", () => mouse.down = false);
+/* ================= DRAW ================= */
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(art, 0, 0);
 
-screen.addEventListener("click", placePixel);
-
-window.addEventListener("resize", () => {
-  screen.width = window.innerWidth;
-  screen.height = window.innerHeight;
-  draw();
-});
-
-/* ===== HELPERS ===== */
-function isInsideArt(mx, my) {
-  const pos = artPosition();
-  return (
-    mx >= pos.x &&
-    my >= pos.y &&
-    mx <= pos.x + GRID_SIZE * ZOOM &&
-    my <= pos.y + GRID_SIZE * ZOOM
-  );
+  // Cadre visible
+  ctx.strokeStyle = "rgba(255,255,255,0.9)";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(0, 0, GRID_SIZE, GRID_SIZE);
 }
 
-/* ===== CORE ===== */
-function placePixel() {
-  if (pixelsRemaining <= 0) return;
-  if (!isInsideArt(mouse.x, mouse.y)) return;
+/* ================= CLICK ================= */
+canvas.addEventListener("mousedown", e => {
+  rect = canvas.getBoundingClientRect();
 
-  const pos = artPosition();
-  const px = Math.floor((mouse.x - pos.x) / ZOOM);
-  const py = Math.floor((mouse.y - pos.y) / ZOOM);
+  const x = Math.floor((e.clientX - rect.left));
+  const y = Math.floor((e.clientY - rect.top));
 
-  if (px < 0 || py < 0 || px >= GRID_SIZE || py >= GRID_SIZE) return;
+  if (x < 0 || y < 0 || x >= GRID_SIZE || y >= GRID_SIZE) return;
+  if (remaining <= 0) return;
 
   artCtx.fillStyle = currentColor;
-  artCtx.fillRect(px, py, 1, 1);
+  artCtx.fillRect(x, y, 1, 1);
 
-  pixelsRemaining--;
-  document.getElementById("remaining").textContent = pixelsRemaining;
-}
+  remaining--;
+  remainingEl.textContent = remaining;
+});
 
-/* ===== DRAW ===== */
-function draw() {
-  ctx.clearRect(0, 0, screen.width, screen.height);
+/* ================= LOOP ================= */
+function loop() {
+  draw();
 
-  const pos = artPosition();
-
-  // Draw artwork
-  ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(
+  // Loupe render
+  zoomCtx.imageSmoothingEnabled = false;
+  zoomCtx.clearRect(0, 0, 140, 140);
+  zoomCtx.drawImage(
     art,
-    pos.x, pos.y,
-    GRID_SIZE * ZOOM,
-    GRID_SIZE * ZOOM
+    mouseX - rect?.left - 10,
+    mouseY - rect?.top - 10,
+    20, 20,
+    0, 0,
+    140, 140
   );
 
-  // Frame
-  ctx.strokeStyle = "rgba(255,255,255,0.3)";
-  ctx.lineWidth = 2;
-  ctx.strokeRect(
-    pos.x, pos.y,
-    GRID_SIZE * ZOOM,
-    GRID_SIZE * ZOOM
-  );
-
-  // Loupe only inside art
-  if (isInsideArt(mouse.x, mouse.y)) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(mouse.x, mouse.y, LOUPE_RADIUS, 0, Math.PI * 2);
-    ctx.clip();
-
-    const px = Math.floor((mouse.x - pos.x) / ZOOM);
-    const py = Math.floor((mouse.y - pos.y) / ZOOM);
-
-    ctx.drawImage(
-      art,
-      px - 10, py - 10, 20, 20,
-      mouse.x - LOUPE_RADIUS,
-      mouse.y - LOUPE_RADIUS,
-      LOUPE_RADIUS * 2,
-      LOUPE_RADIUS * 2
-    );
-    ctx.restore();
-
-    // Loupe border
-    ctx.beginPath();
-    ctx.arc(mouse.x, mouse.y, LOUPE_RADIUS, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(255,255,255,0.9)";
-    ctx.lineWidth = 2;
-    ctx.shadowColor = "rgba(255,255,255,0.4)";
-    ctx.shadowBlur = 10;
-    ctx.stroke();
-  }
+  requestAnimationFrame(loop);
 }
 
-/* ===== INIT ===== */
-draw();
+loop();
 </script>
 
 </body>
 </html>
-
