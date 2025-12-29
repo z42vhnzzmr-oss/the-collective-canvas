@@ -54,38 +54,41 @@ p{
 
 .palette{
   display:grid;
-  grid-template-columns:repeat(5,1fr);
+  grid-template-columns:repeat(6,1fr);
   gap:10px;
   margin-top:20px;
 }
 
 .color{
-  width:36px;
-  height:36px;
+  width:34px;
+  height:34px;
   border-radius:50%;
   cursor:pointer;
-  border:2px solid transparent;
+  border:1px solid #333;
+  transition:0.2s;
 }
 
-.color.active{
-  border-color:#fff;
+.color:hover{
   transform:scale(1.1);
 }
 
-/* CANVAS AREA */
+.color.active{
+  border:2px solid #fff;
+}
+
+/* CANVAS */
 .canvas-wrapper{
   position:relative;
 }
 
 .frame{
-  width:600px;
-  height:600px;
+  width:620px;
+  height:620px;
   border:1px solid var(--border);
+  background:#000;
   display:flex;
   align-items:center;
   justify-content:center;
-  background:#000;
-  box-shadow:0 0 40px rgba(255,255,255,0.03);
 }
 
 canvas{
@@ -103,7 +106,6 @@ canvas{
   border:1px solid #fff;
   pointer-events:none;
   overflow:hidden;
-  transform:translate(-50%,-50%);
   display:none;
 }
 
@@ -111,16 +113,18 @@ canvas{
   position:absolute;
   width:2000px;
   height:2000px;
+  image-rendering:pixelated;
 }
 
-/* POINTER */
 .pointer{
   position:absolute;
-  width:6px;
-  height:6px;
+  left:50%;
+  top:50%;
+  width:4px;
+  height:4px;
   border:1px solid #fff;
   border-radius:50%;
-  pointer-events:none;
+  transform:translate(-50%,-50%);
 }
 
 /* VALIDATION */
@@ -130,7 +134,7 @@ canvas{
   border:1px solid #fff;
   text-align:center;
   cursor:pointer;
-  opacity:0.4;
+  opacity:0.3;
   transition:0.3s;
 }
 
@@ -183,24 +187,32 @@ Most contributors return later.
 </main>
 
 <script>
+const frame=document.getElementById("frame");
 const canvas=document.getElementById("canvas");
 const ctx=canvas.getContext("2d");
+
 const loupe=document.getElementById("loupe");
 const zoom=document.getElementById("zoom");
 const zctx=zoom.getContext("2d");
-const pointer=document.querySelector(".pointer");
-const frame=document.getElementById("frame");
+
 const validate=document.getElementById("validate");
 const countEl=document.getElementById("count");
 
 let remaining=5;
 let currentColor="#ffffff";
-let tempPixel=null;
+let pendingPixel=null;
 
 /* PALETTE */
-const colors=["#ffffff","#ff3b3b","#ffd93d","#3bff8f","#3bc7ff","#9b59ff","#ff7bd8"];
-const palette=document.getElementById("palette");
+const colors=[
+"#ffffff","#e0e0e0","#a0a0a0","#505050",
+"#ff3b3b","#ff7b7b","#ffd93d","#ffb703",
+"#3bff8f","#00c853","#3bc7ff","#0096c7",
+"#9b59ff","#6c5ce7","#ff7bd8","#d63384",
+"#f1faee","#e9c46a","#2a9d8f","#264653",
+"#8d99ae","#edf2f4","#ef233c","#d90429"
+];
 
+const palette=document.getElementById("palette");
 colors.forEach(c=>{
   const d=document.createElement("div");
   d.className="color";
@@ -214,38 +226,39 @@ colors.forEach(c=>{
 });
 palette.firstChild.classList.add("active");
 
-/* MOUSE */
+/* MOUSE MOVE */
 frame.addEventListener("mousemove",e=>{
   const rect=frame.getBoundingClientRect();
+
   const x=e.clientX-rect.left;
   const y=e.clientY-rect.top;
 
   if(x<0||y<0||x>rect.width||y>rect.height){
     loupe.style.display="none";
+    frame.style.cursor="default";
     return;
   }
 
+  frame.style.cursor="none";
   loupe.style.display="block";
-  loupe.style.left=e.clientX+"px";
-  loupe.style.top=e.clientY+"px";
 
-  const cx=Math.floor(x/rect.width*1000);
-  const cy=Math.floor(y/rect.height*1000);
+  loupe.style.left=(x-80)+"px";
+  loupe.style.top=(y-80)+"px";
+
+  const cx=Math.min(999,Math.max(0,Math.floor(x/rect.width*1000)));
+  const cy=Math.min(999,Math.max(0,Math.floor(y/rect.height*1000)));
 
   zctx.clearRect(0,0,2000,2000);
-  zctx.imageSmoothingEnabled=false;
   zctx.drawImage(canvas,-cx*2+80,-cy*2+80);
 
-  pointer.style.left="50%";
-  pointer.style.top="50%";
-
-  tempPixel={x:cx,y:cy};
+  pendingPixel={x:cx,y:cy};
 });
 
+/* CLICK */
 frame.addEventListener("click",()=>{
-  if(!tempPixel||remaining<=0)return;
+  if(!pendingPixel||remaining<=0)return;
   ctx.fillStyle=currentColor;
-  ctx.fillRect(tempPixel.x,tempPixel.y,1,1);
+  ctx.fillRect(pendingPixel.x,pendingPixel.y,1,1);
   validate.classList.add("active");
 });
 
@@ -255,7 +268,7 @@ validate.onclick=()=>{
   remaining--;
   countEl.textContent=remaining;
   validate.classList.remove("active");
-  tempPixel=null;
+  pendingPixel=null;
 
   if(remaining===1){
     alert("One fragment remains.");
