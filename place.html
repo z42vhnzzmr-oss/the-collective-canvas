@@ -2,95 +2,109 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Place your fragments — The Collective Canvas</title>
+<title>Place — The Collective Canvas</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400&display=swap" rel="stylesheet">
 
 <style>
-body { background:#0b0b0b; color:#f5f5f5; font-family:Inter,sans-serif; margin:0; text-align:center; }
-h1 { margin-top:40px; font-size:28px; }
-#canvas-container { position:relative; display:inline-block; margin-top:20px; }
-canvas { image-rendering: pixelated; border:1px solid #222; cursor:pointer; width:600px; height:600px; }
-#loupe { position:absolute; pointer-events:none; border:2px solid #fff; border-radius:50%; display:none; width:200px; height:200px; }
-#counter { margin-top:20px; font-size:16px; }
+body {
+  margin: 0;
+  background: #0b0b0b;
+  color: #fff;
+  font-family: Inter, sans-serif;
+  overflow: hidden;
+}
+
+#ui {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 10;
+}
+
+#counter {
+  font-size: 14px;
+  opacity: 0.8;
+  margin-bottom: 10px;
+}
+
+input[type="color"] {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+canvas {
+  display: block;
+  cursor: crosshair;
+}
 </style>
 </head>
 
 <body>
-<h1>Place your fragments</h1>
-<p>Click or drag to place your pixels. Use the loupe to see details.</p>
 
-<div id="canvas-container">
-  <canvas id="canvas" width="1000" height="1000"></canvas>
-  <canvas id="loupe" width="200" height="200"></canvas>
+<div id="ui">
+  <div id="counter">Pixels remaining: <strong id="remaining">10</strong></div>
+  <input type="color" id="colorPicker" value="#ffffff">
 </div>
 
-<div id="counter">Pixels remaining: <span id="pixels-remaining">0</span></div>
+<canvas id="canvas"></canvas>
 
 <script>
-// === INIT ===
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-const loupe = document.getElementById('loupe');
-const ctxLoupe = loupe.getContext('2d');
-const counterSpan = document.getElementById('pixels-remaining');
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
 
-let pixelsToPlace = parseInt(new URLSearchParams(window.location.search).get('pixels')) || 1;
-let selectedColor = new URLSearchParams(window.location.search).get('color') || '#FF0000';
-counterSpan.textContent = pixelsToPlace;
+const SIZE = 1000;
+let pixelsRemaining = 10;
+let color = "#ffffff";
 
-const grid = new Uint8Array(1000000); // 1000x1000
-function index(x,y){ return y*1000 + x; }
+canvas.width = SIZE;
+canvas.height = SIZE;
 
-// === DRAG & CLICK PLACEMENT ===
-let isDragging = false;
-
-function placePixel(x,y){
-  if(pixelsToPlace<=0 || grid[index(x,y)]===1) return;
-  ctx.fillStyle = selectedColor;
-  ctx.fillRect(x,y,1,1);
-  grid[index(x,y)] = 1;
-  pixelsToPlace--;
-  counterSpan.textContent = pixelsToPlace;
-
-  // effet poétique: glow
-  ctx.globalAlpha = 0.3;
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(x-1,y-1,3,3);
-  ctx.globalAlpha = 1;
+// Resize canvas to screen
+function resize() {
+  canvas.style.width = window.innerWidth + "px";
+  canvas.style.height = window.innerHeight + "px";
 }
+resize();
+window.addEventListener("resize", resize);
 
-canvas.addEventListener('mousedown', e=>{ isDragging=true; });
-canvas.addEventListener('mouseup', e=>{ isDragging=false; });
-canvas.addEventListener('mouseleave', e=>{ isDragging=false; });
+// Fill background
+ctx.fillStyle = "#0b0b0b";
+ctx.fillRect(0, 0, SIZE, SIZE);
 
-canvas.addEventListener('mousemove', e=>{
-  const rect = canvas.getBoundingClientRect();
-  const x = Math.floor((e.clientX - rect.left) * (canvas.width / rect.width));
-  const y = Math.floor((e.clientY - rect.top) * (canvas.height / rect.height));
-
-  // loupe
-  loupe.style.display = 'block';
-  loupe.style.left = e.pageX + 20 + 'px';
-  loupe.style.top = e.pageY - 100 + 'px';
-  const zoom=10;
-  ctxLoupe.clearRect(0,0,loupe.width,loupe.height);
-  ctxLoupe.drawImage(canvas, x-10, y-10, 20, 20, 0, 0, loupe.width, loupe.height);
-
-  if(isDragging) placePixel(x,y);
+// Color picker
+document.getElementById("colorPicker").addEventListener("input", e => {
+  color = e.target.value;
 });
 
-canvas.addEventListener('click', e=>{
+// Draw pixel
+canvas.addEventListener("click", e => {
+  if (pixelsRemaining <= 0) return;
+
   const rect = canvas.getBoundingClientRect();
-  const x = Math.floor((e.clientX - rect.left) * (canvas.width / rect.width));
-  const y = Math.floor((e.clientY - rect.top) * (canvas.height / rect.height));
-  placePixel(x,y);
+  const x = Math.floor((e.clientX - rect.left) / rect.width * SIZE);
+  const y = Math.floor((e.clientY - rect.top) / rect.height * SIZE);
+
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, 1, 1);
+
+  pixelsRemaining--;
+  document.getElementById("remaining").textContent = pixelsRemaining;
 });
 
-canvas.addEventListener('mouseleave', ()=>{
-  loupe.style.display = 'none';
+// Simple zoom (wheel)
+let scale = 1;
+canvas.addEventListener("wheel", e => {
+  e.preventDefault();
+  scale += e.deltaY * -0.001;
+  scale = Math.min(Math.max(1, scale), 20);
+
+  canvas.style.transform = `scale(${scale})`;
 });
 </script>
+
 </body>
 </html>
 
