@@ -18,12 +18,12 @@ html, body {
   top: 24px;
   left: 24px;
   z-index: 20;
-  background: rgba(0,0,0,0.7);
+  background: rgba(0,0,0,0.65);
   border: 1px solid rgba(255,255,255,0.25);
-  padding: 16px;
-  border-radius: 12px;
+  padding: 18px;
+  border-radius: 14px;
   color: white;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
 }
 
 #ui h3 {
@@ -35,15 +35,15 @@ html, body {
 }
 
 #remaining {
-  font-size: 20px;
-  margin-bottom: 12px;
+  font-size: 22px;
+  margin-bottom: 14px;
 }
 
 #colorPicker {
   width: 56px;
   height: 56px;
   border-radius: 8px;
-  border: 2px solid rgba(255,255,255,0.8);
+  border: 1px solid rgba(255,255,255,0.6);
   background: none;
   cursor: pointer;
 }
@@ -51,8 +51,24 @@ html, body {
 #activeColor {
   margin-top: 8px;
   width: 56px;
-  height: 12px;
-  border-radius: 6px;
+  height: 10px;
+  border-radius: 5px;
+}
+
+/* Validation */
+#validate {
+  margin-top: 16px;
+  padding: 10px 18px;
+  border: 1px solid rgba(255,255,255,0.7);
+  background: transparent;
+  color: white;
+  font-size: 13px;
+  cursor: pointer;
+  display: none;
+}
+#validate:hover {
+  background: white;
+  color: black;
 }
 
 /* ================= CANVAS ================= */
@@ -67,6 +83,7 @@ html, body {
 #main {
   image-rendering: pixelated;
   background: #000;
+  transform: scale(0.75); /* Dézoom visuel */
 }
 
 /* ================= LOUPE ================= */
@@ -75,7 +92,7 @@ html, body {
   width: 140px;
   height: 140px;
   border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.9);
+  border: 1px solid rgba(255,255,255,0.8);
   pointer-events: none;
   overflow: hidden;
   z-index: 15;
@@ -86,16 +103,16 @@ html, body {
   image-rendering: pixelated;
 }
 
-/* Réticule */
+/* Réticule très fin */
 #loupe::after {
   content: "";
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(#fff,#fff) center/2px 100%,
-    linear-gradient(#fff,#fff) center/100% 2px;
+    linear-gradient(#fff,#fff) center/1px 100%,
+    linear-gradient(#fff,#fff) center/100% 1px;
   background-repeat: no-repeat;
-  opacity: 0.8;
+  opacity: 0.6;
 }
 </style>
 </head>
@@ -104,12 +121,14 @@ html, body {
 
 <!-- UI -->
 <div id="ui">
-  <h3>Pixels disponibles</h3>
+  <h3>Pixels remaining</h3>
   <div id="remaining">20</div>
 
-  <h3>Choisir une couleur</h3>
+  <h3>Color</h3>
   <input type="color" id="colorPicker" value="#ffffff">
   <div id="activeColor"></div>
+
+  <button id="validate">Validate this mark</button>
 </div>
 
 <!-- Canvas -->
@@ -139,10 +158,15 @@ const artCtx = art.getContext("2d");
 artCtx.fillStyle = "#000";
 artCtx.fillRect(0,0,SIZE,SIZE);
 
+/* Locked pixels */
+const locked = new Set();
+
 /* ================= UI ================= */
 const remainingEl = document.getElementById("remaining");
 const picker = document.getElementById("colorPicker");
 const activeColor = document.getElementById("activeColor");
+const validateBtn = document.getElementById("validate");
+
 activeColor.style.background = currentColor;
 
 picker.addEventListener("input", e => {
@@ -159,6 +183,7 @@ const zoomCtx = zoom.getContext("2d");
 let mouseX = 0;
 let mouseY = 0;
 let insideCanvas = false;
+let pendingPixel = null;
 
 /* ================= MOUSE MOVE ================= */
 window.addEventListener("mousemove", e => {
@@ -166,7 +191,6 @@ window.addEventListener("mousemove", e => {
   mouseY = e.clientY;
 
   const rect = canvas.getBoundingClientRect();
-
   insideCanvas =
     mouseX >= rect.left &&
     mouseX <= rect.right &&
@@ -174,12 +198,10 @@ window.addEventListener("mousemove", e => {
     mouseY <= rect.bottom;
 
   if (insideCanvas) {
-    canvas.style.cursor = "none";
     loupe.style.display = "block";
-    loupe.style.left = mouseX + 20 + "px";
-    loupe.style.top = mouseY + 20 + "px";
+    loupe.style.left = mouseX + 12 + "px";
+    loupe.style.top = mouseY + 12 + "px";
   } else {
-    canvas.style.cursor = "default";
     loupe.style.display = "none";
   }
 });
@@ -189,24 +211,49 @@ canvas.addEventListener("mousedown", e => {
   if (!insideCanvas || remaining <= 0) return;
 
   const rect = canvas.getBoundingClientRect();
-  const x = Math.floor(e.clientX - rect.left);
-  const y = Math.floor(e.clientY - rect.top);
+  const x = Math.floor((e.clientX - rect.left) / 0.75);
+  const y = Math.floor((e.clientY - rect.top) / 0.75);
+  const key = `${x},${y}`;
 
-  artCtx.fillStyle = currentColor;
+  if (locked.has(key)) return;
+
+  pendingPixel = { x, y, color: currentColor };
+  validateBtn.style.display = "block";
+});
+
+/* ================= VALIDATE ================= */
+validateBtn.addEventListener("click", () => {
+  if (!pendingPixel) return;
+
+  const { x, y, color } = pendingPixel;
+  const key = `${x},${y}`;
+
+  artCtx.fillStyle = color;
   artCtx.fillRect(x, y, 1, 1);
+
+  locked.add(key);
+  pendingPixel = null;
 
   remaining--;
   remainingEl.textContent = remaining;
+  validateBtn.style.display = "none";
 });
 
 /* ================= DRAW ================= */
 function draw() {
-  ctx.drawImage(art, 0, 0);
+  ctx.clearRect(0,0,SIZE,SIZE);
+  ctx.drawImage(art,0,0);
 
-  // Cadre clair
-  ctx.strokeStyle = "rgba(255,255,255,0.9)";
-  ctx.lineWidth = 2;
-  ctx.strokeRect(0, 0, SIZE, SIZE);
+  /* Cadre élégant */
+  ctx.strokeStyle = "rgba(255,255,255,0.8)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(0,0,SIZE,SIZE);
+
+  /* Preview pixel */
+  if (pendingPixel) {
+    ctx.fillStyle = pendingPixel.color;
+    ctx.fillRect(pendingPixel.x, pendingPixel.y, 1, 1);
+  }
 }
 
 /* ================= LOOP ================= */
@@ -215,8 +262,8 @@ function loop() {
 
   if (insideCanvas) {
     const rect = canvas.getBoundingClientRect();
-    const cx = Math.floor(mouseX - rect.left);
-    const cy = Math.floor(mouseY - rect.top);
+    const cx = Math.floor((mouseX - rect.left) / 0.75);
+    const cy = Math.floor((mouseY - rect.top) / 0.75);
 
     zoomCtx.imageSmoothingEnabled = false;
     zoomCtx.clearRect(0,0,140,140);
@@ -227,6 +274,11 @@ function loop() {
       0, 0,
       140, 140
     );
+
+    /* Cadre visible dans la loupe */
+    zoomCtx.strokeStyle = "rgba(255,255,255,0.8)";
+    zoomCtx.lineWidth = 1;
+    zoomCtx.strokeRect(0,0,140,140);
   }
 
   requestAnimationFrame(loop);
