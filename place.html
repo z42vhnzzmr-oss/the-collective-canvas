@@ -142,6 +142,7 @@ const palette = document.getElementById("palette");
 const validateBtn = document.getElementById("validate");
 const countEl = document.getElementById("count");
 
+// Palette
 const colors = [
   "#ffffff","#d4af37","#ff003c","#ff7a00","#ffd400",
   "#00ff9c","#00c3ff","#5b5bff","#b000ff","#ff00c8",
@@ -162,52 +163,55 @@ colors.forEach(c => {
   palette.appendChild(el);
 });
 
+// Mouse move
 canvas.addEventListener("mousemove", e => {
   if (!currentColor || pixelsRemaining <= 0) return;
 
   const rect = canvas.getBoundingClientRect();
-  const scale = canvas.width / rect.width;
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
 
-  // Coordonnées locales dans le canvas
-  const localX = (e.clientX - rect.left) * scale;
-  const localY = (e.clientY - rect.top) * scale;
+  // Coordonnées exactes dans le canvas
+  let x = Math.floor((e.clientX - rect.left) * scaleX);
+  let y = Math.floor((e.clientY - rect.top) * scaleY);
 
-  const x = Math.floor(localX);
-  const y = Math.floor(localY);
-
-  if (x < 0 || y < 0 || x >= 1000 || y >= 1000) {
-    loupe.style.display = "none";
-    targetPixel = null;
-    return;
-  }
-
-  loupe.style.display = "block";
-  // loupe position : on positionne par rapport au canvas visuel
-  loupe.style.left = (e.clientX - rect.left - 80) + "px";
-  loupe.style.top  = (e.clientY - rect.top - 80) + "px";
-
-  // zoom dans la loupe
-  loupeCtx.imageSmoothingEnabled = false;
-  loupeCtx.clearRect(0,0,80,80);
-  loupeCtx.drawImage(canvas, x-4, y-4, 8, 8, 0, 0, 80, 80);
+  if (x < 0) x = 0;
+  if (y < 0) y = 0;
+  if (x >= canvas.width) x = canvas.width - 1;
+  if (y >= canvas.height) y = canvas.height - 1;
 
   const key = x + "," + y;
   targetPixel = usedPixels.has(key) ? null : { x, y };
+
+  // Affichage loupe
+  loupe.style.display = "block";
+  loupe.style.left = (e.clientX - rect.left - 80) + "px";
+  loupe.style.top  = (e.clientY - rect.top - 80) + "px";
+
+  loupeCtx.imageSmoothingEnabled = false;
+  loupeCtx.clearRect(0,0,80,80);
+  let sx = x - 4; if (sx < 0) sx = 0;
+  let sy = y - 4; if (sy < 0) sy = 0;
+  let sw = (sx + 8 > canvas.width) ? canvas.width - sx : 8;
+  let sh = (sy + 8 > canvas.height) ? canvas.height - sy : 8;
+
+  loupeCtx.drawImage(canvas, sx, sy, sw, sh, 0, 0, 80, 80);
 });
 
+// Click
 canvas.addEventListener("click", () => {
   if (!targetPixel) return;
   validateBtn.disabled = false;
   document.getElementById("s3").classList.add("active");
 });
 
+// Validate
 validateBtn.onclick = () => {
   if (!targetPixel || !currentColor || pixelsRemaining <= 0) return;
 
   const key = targetPixel.x + "," + targetPixel.y;
   if (usedPixels.has(key)) return;
 
-  // POSER LE PIXEL EXACTEMENT AU CENTRE
   ctx.fillStyle = currentColor;
   ctx.fillRect(targetPixel.x, targetPixel.y, 1, 1);
 
@@ -228,3 +232,4 @@ validateBtn.onclick = () => {
 
 </body>
 </html>
+
