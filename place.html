@@ -21,7 +21,7 @@ main{
   padding:40px;
 }
 
-/* LEFT */
+/* PANEL */
 aside{
   width:260px;
 }
@@ -31,16 +31,21 @@ h1{
   font-size:28px;
 }
 
+.step{
+  font-size:13px;
+  color:#8a8a8a;
+  margin:20px 0 10px;
+}
+
 .palette{
   display:grid;
-  grid-template-columns:repeat(6,1fr);
+  grid-template-columns:repeat(5,1fr);
   gap:10px;
-  margin:20px 0;
 }
 
 .color{
-  width:32px;
-  height:32px;
+  width:34px;
+  height:34px;
   border-radius:50%;
   cursor:pointer;
   border:2px solid transparent;
@@ -50,8 +55,29 @@ h1{
   border-color:#fff;
 }
 
+button{
+  margin-top:20px;
+  width:100%;
+  padding:14px;
+  background:none;
+  border:1px solid #fff;
+  color:#fff;
+  cursor:pointer;
+  opacity:0.3;
+}
+
+button.active{
+  opacity:1;
+}
+
+.counter{
+  margin-top:20px;
+  font-size:14px;
+  color:#aaa;
+}
+
 /* CANVAS */
-.canvas-zone{
+.zone{
   position:relative;
 }
 
@@ -59,9 +85,6 @@ h1{
   width:600px;
   height:600px;
   border:1px solid #333;
-  display:flex;
-  align-items:center;
-  justify-content:center;
 }
 
 canvas{
@@ -98,20 +121,6 @@ canvas{
   border-radius:50%;
   transform:translate(-50%,-50%);
 }
-
-/* VALIDATE */
-.validate{
-  margin-top:20px;
-  padding:14px;
-  border:1px solid #fff;
-  text-align:center;
-  cursor:pointer;
-  opacity:0.3;
-}
-
-.validate.active{
-  opacity:1;
-}
 </style>
 </head>
 
@@ -120,15 +129,23 @@ canvas{
 <main>
 
 <aside>
-<h1>Your presence</h1>
-<p>Fragments remaining: <strong id="count">5</strong></p>
+<h1>Your gesture</h1>
 
+<div class="step">1 — Choose a color</div>
 <div class="palette" id="palette"></div>
 
-<div class="validate" id="validate">Validate fragment</div>
+<div class="step">2 — Drop your fragment</div>
+<button id="drop" disabled>Drop pixel</button>
+
+<div class="step">3 — Validate</div>
+<button id="validate" disabled>Validate fragment</button>
+
+<div class="counter">
+Fragments remaining: <strong id="count">5</strong>
+</div>
 </aside>
 
-<div class="canvas-zone">
+<div class="zone">
 <div class="frame" id="frame">
 <canvas id="canvas" width="1000" height="1000"></canvas>
 </div>
@@ -142,29 +159,33 @@ canvas{
 </main>
 
 <script>
-const frame = document.getElementById("frame");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
+const frame = document.getElementById("frame");
 
 const loupe = document.getElementById("loupe");
 const zoom = document.getElementById("zoom");
 const zctx = zoom.getContext("2d");
 
+const dropBtn = document.getElementById("drop");
 const validateBtn = document.getElementById("validate");
 const countEl = document.getElementById("count");
 
 let remaining = 5;
-let currentColor = "#ffffff";
+let color = null;
+let state = "color"; // color | drop | validate
 let pending = null;
 let locked = new Set();
 
-/* COLORS */
+/* PALETTE */
 const colors = [
-"#ffffff","#e0e0e0","#999","#555",
-"#ff3b3b","#ffb703","#ffd93d",
-"#3bff8f","#00c853","#3bc7ff",
-"#0096c7","#9b59ff","#6c5ce7",
-"#ff7bd8","#d63384","#264653"
+"#ffffff","#dcdcdc","#999","#333",
+"#ff3b3b","#ff7b00","#ffd93d",
+"#00c853","#3bff8f","#2a9d8f",
+"#3bc7ff","#0096c7","#264653",
+"#9b59ff","#6c5ce7","#ff7bd8",
+"#d63384","#ef233c","#edf2f4",
+"#0b0b0b"
 ];
 
 const palette = document.getElementById("palette");
@@ -173,17 +194,20 @@ colors.forEach(c=>{
   d.className="color";
   d.style.background=c;
   d.onclick=()=>{
+    if(state!=="color") return;
     document.querySelectorAll(".color").forEach(x=>x.classList.remove("active"));
     d.classList.add("active");
-    currentColor=c;
+    color=c;
+    dropBtn.disabled=false;
+    dropBtn.classList.add("active");
+    state="drop";
   };
   palette.appendChild(d);
 });
-palette.firstChild.classList.add("active");
 
-/* MOVE */
+/* MOUSE MOVE */
 frame.addEventListener("mousemove",e=>{
-  if(remaining<=0) return;
+  if(state!=="drop") return;
 
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
@@ -191,20 +215,13 @@ frame.addEventListener("mousemove",e=>{
 
   if(x<0||y<0||x>=rect.width||y>=rect.height){
     loupe.style.display="none";
-    frame.style.cursor="default";
-    pending=null;
     return;
   }
 
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
+  const scale = canvas.width / rect.width;
+  const px = Math.floor(x * scale);
+  const py = Math.floor(y * scale);
 
-  const px = Math.floor(x * scaleX);
-  const py = Math.floor(y * scaleY);
-
-  if(px<0||py<0||px>999||py>999) return;
-
-  frame.style.cursor="none";
   loupe.style.display="block";
   loupe.style.left = (x - 80) + "px";
   loupe.style.top = (y - 80) + "px";
@@ -212,36 +229,46 @@ frame.addEventListener("mousemove",e=>{
   zctx.clearRect(0,0,2000,2000);
   zctx.drawImage(canvas, -px*2 + 80, -py*2 + 80);
 
-  pending = {x:px, y:py};
+  pending = {x:px,y:py};
 });
 
-/* CLICK */
-frame.addEventListener("click",()=>{
-  if(!pending || remaining<=0) return;
+/* DROP */
+dropBtn.onclick=()=>{
+  if(state!=="drop"||!pending) return;
 
-  const key = pending.x + "," + pending.y;
+  const key=pending.x+","+pending.y;
   if(locked.has(key)) return;
 
-  ctx.fillStyle = currentColor;
-  ctx.fillRect(pending.x, pending.y, 1, 1);
+  ctx.fillStyle=color;
+  ctx.fillRect(pending.x,pending.y,1,1);
+
+  state="validate";
+  validateBtn.disabled=false;
   validateBtn.classList.add("active");
-});
+};
 
 /* VALIDATE */
-validateBtn.onclick = ()=>{
-  if(!validateBtn.classList.contains("active")) return;
-  if(!pending) return;
+validateBtn.onclick=()=>{
+  if(state!=="validate") return;
 
-  const key = pending.x + "," + pending.y;
+  const key=pending.x+","+pending.y;
   locked.add(key);
 
   remaining--;
-  countEl.textContent = remaining;
+  countEl.textContent=remaining;
 
+  // reset
+  pending=null;
+  color=null;
+  state="color";
+
+  document.querySelectorAll(".color").forEach(x=>x.classList.remove("active"));
+  dropBtn.disabled=true;
+  dropBtn.classList.remove("active");
+  validateBtn.disabled=true;
   validateBtn.classList.remove("active");
-  pending = null;
 
-  if(remaining === 0){
+  if(remaining===0){
     alert("Your contribution is complete.");
   }
 };
