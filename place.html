@@ -16,7 +16,6 @@ body {
   overflow: hidden;
 }
 
-/* UI */
 #ui {
   width: 280px;
   padding: 30px;
@@ -24,11 +23,7 @@ body {
   border-right: 1px solid rgba(255,255,255,0.08);
 }
 
-.step {
-  margin-bottom: 18px;
-  font-size: 14px;
-  opacity: 0.4;
-}
+.step { margin-bottom: 18px; font-size: 14px; opacity: 0.4; }
 .step.active { opacity: 1; }
 
 .palette {
@@ -58,12 +53,8 @@ button {
   border: 1px solid rgba(255,255,255,0.4);
   cursor: pointer;
 }
-button:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
+button:disabled { opacity: 0.3; cursor: not-allowed; }
 
-/* STAGE */
 #stage {
   flex: 1;
   display: flex;
@@ -82,11 +73,8 @@ button:disabled {
   cursor: none;
 }
 
-canvas {
-  image-rendering: pixelated;
-}
+canvas { image-rendering: pixelated; }
 
-/* LOUPE */
 #loupe {
   position: absolute;
   width: 160px;
@@ -99,10 +87,7 @@ canvas {
   display: none;
 }
 
-#loupe canvas {
-  width: 100%;
-  height: 100%;
-}
+#loupe canvas { width: 100%; height: 100%; }
 
 #pointer {
   position: absolute;
@@ -122,12 +107,9 @@ canvas {
 <div id="ui">
   <div class="step active" id="s1">1 · Choisis une couleur</div>
   <div class="palette" id="palette"></div>
-
   <div class="step" id="s2">2 · Place ton pixel</div>
   <div class="step" id="s3">3 · Valide</div>
-
   <button id="validate" disabled>VALIDER</button>
-
   <div style="margin-top:30px;opacity:0.6;">
     Pixels restants : <span id="count">5</span>
   </div>
@@ -144,13 +126,11 @@ canvas {
 </div>
 
 <script>
-/* STATE */
 let pixelsRemaining = 5;
 let currentColor = null;
 let pendingPixel = null;
 const usedPixels = new Set();
 
-/* CANVAS */
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
@@ -158,12 +138,10 @@ const loupe = document.getElementById("loupe");
 const loupeCanvas = document.getElementById("loupeCanvas");
 const loupeCtx = loupeCanvas.getContext("2d");
 
-/* UI */
 const palette = document.getElementById("palette");
 const validateBtn = document.getElementById("validate");
 const countEl = document.getElementById("count");
 
-/* COLORS */
 const colors = [
   "#ffffff","#d4af37","#ff003c","#ff7a00","#ffd400",
   "#00ff9c","#00c3ff","#5b5bff","#b000ff","#ff00c8",
@@ -184,7 +162,6 @@ colors.forEach(c => {
   palette.appendChild(el);
 });
 
-/* MOVE */
 canvas.addEventListener("mousemove", e => {
   if (!currentColor || pixelsRemaining <= 0) return;
 
@@ -198,13 +175,6 @@ canvas.addEventListener("mousemove", e => {
     return;
   }
 
-  const key = x + "," + y;
-  if (usedPixels.has(key)) {
-    loupe.style.display = "none";
-    pendingPixel = null;
-    return;
-  }
-
   loupe.style.display = "block";
   loupe.style.left = (e.clientX - rect.left - 80) + "px";
   loupe.style.top = (e.clientY - rect.top - 80) + "px";
@@ -213,17 +183,16 @@ canvas.addEventListener("mousemove", e => {
   loupeCtx.clearRect(0,0,80,80);
   loupeCtx.drawImage(canvas, x-4, y-4, 8, 8, 0, 0, 80, 80);
 
-  pendingPixel = { x, y };
+  const key = x + "," + y;
+  pendingPixel = usedPixels.has(key) ? null : { x, y };
 });
 
-/* CLICK = ARM VALIDATION */
 canvas.addEventListener("click", () => {
   if (!pendingPixel) return;
   validateBtn.disabled = false;
   document.getElementById("s3").classList.add("active");
 });
 
-/* VALIDATE */
 validateBtn.onclick = () => {
   if (!pendingPixel || !currentColor || pixelsRemaining <= 0) return;
 
@@ -244,9 +213,7 @@ validateBtn.onclick = () => {
   document.getElementById("s2").classList.remove("active");
   document.getElementById("s3").classList.remove("active");
 
-  if (pixelsRemaining <= 0) {
-    loupe.style.display = "none";
-  }
+  if (pixelsRemaining <= 0) loupe.style.display = "none";
 };
 </script>
 
