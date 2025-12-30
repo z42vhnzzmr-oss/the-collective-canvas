@@ -1,278 +1,259 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Place your fragment — The Collective Canvas</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<link href="https://fonts.googleapis.com/css2?family=Didot&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+<title>Place your pixels</title>
 
 <style>
-body{
-  margin:0;
-  background:#0b0b0b;
-  color:#f5f5f5;
-  font-family:Inter,sans-serif;
+/* ===== RESET ===== */
+body {
+  margin: 0;
+  font-family: "Didot", "Bodoni Moda", serif;
+  background: #0b0b0b;
+  color: #fff;
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
 }
 
-main{
-  display:flex;
-  gap:40px;
-  padding:40px;
+/* ===== LAYOUT ===== */
+#ui {
+  width: 280px;
+  padding: 30px;
+  background: linear-gradient(180deg, #0f0f0f, #070707);
+  border-right: 1px solid rgba(255,255,255,0.08);
 }
 
-/* PANEL */
-aside{
-  width:260px;
+#stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-h1{
-  font-family:Didot,serif;
-  font-size:28px;
+/* ===== CADRE OEUVRE ===== */
+#frame {
+  position: relative;
+  width: 1000px;
+  height: 1000px;
+  transform: scale(0.75);
+  border: 2px solid rgba(255,255,255,0.25);
+  box-shadow: 0 0 80px rgba(255,255,255,0.08);
+  background: #111;
+  overflow: hidden;
+  cursor: none;
 }
 
-.step{
-  font-size:13px;
-  color:#8a8a8a;
-  margin:20px 0 10px;
+/* ===== CANVAS ===== */
+canvas {
+  image-rendering: pixelated;
 }
 
-.palette{
-  display:grid;
-  grid-template-columns:repeat(5,1fr);
-  gap:10px;
+/* ===== LOUPE ===== */
+#loupe {
+  position: absolute;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  pointer-events: none;
+  border: 1px solid rgba(255,255,255,0.5);
+  box-shadow: 0 0 30px rgba(255,255,255,0.3);
+  overflow: hidden;
+  display: none;
 }
 
-.color{
-  width:34px;
-  height:34px;
-  border-radius:50%;
-  cursor:pointer;
-  border:2px solid transparent;
+#loupe canvas {
+  width: 100%;
+  height: 100%;
 }
 
-.color.active{
-  border-color:#fff;
+/* pointeur */
+#pointer {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: white;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
-button{
-  margin-top:20px;
-  width:100%;
-  padding:14px;
-  background:none;
-  border:1px solid #fff;
-  color:#fff;
-  cursor:pointer;
-  opacity:0.3;
+/* ===== PALETTE ===== */
+.palette {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  margin-bottom: 30px;
 }
 
-button.active{
-  opacity:1;
+.color {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.2);
+  cursor: pointer;
 }
 
-.counter{
-  margin-top:20px;
-  font-size:14px;
-  color:#aaa;
+.color.active {
+  border: 2px solid white;
+  box-shadow: 0 0 12px currentColor;
 }
 
-/* CANVAS */
-.zone{
-  position:relative;
+/* ===== STEPS ===== */
+.step {
+  margin-bottom: 18px;
+  font-size: 14px;
+  opacity: 0.8;
 }
 
-.frame{
-  width:600px;
-  height:600px;
-  border:1px solid #333;
+.step.active {
+  opacity: 1;
 }
 
-canvas{
-  width:100%;
-  height:100%;
-  image-rendering:pixelated;
+/* ===== BUTTON ===== */
+button {
+  width: 100%;
+  padding: 14px;
+  font-size: 14px;
+  background: transparent;
+  color: white;
+  border: 1px solid rgba(255,255,255,0.4);
+  cursor: pointer;
 }
 
-/* LOUPE */
-.loupe{
-  position:absolute;
-  width:160px;
-  height:160px;
-  border-radius:50%;
-  border:1px solid #fff;
-  overflow:hidden;
-  pointer-events:none;
-  display:none;
-}
-
-.loupe canvas{
-  width:2000px;
-  height:2000px;
-  image-rendering:pixelated;
-}
-
-.pointer{
-  position:absolute;
-  left:50%;
-  top:50%;
-  width:4px;
-  height:4px;
-  border:1px solid #fff;
-  border-radius:50%;
-  transform:translate(-50%,-50%);
+button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 </style>
 </head>
 
 <body>
 
-<main>
+<!-- ===== UI ===== -->
+<div id="ui">
+  <div class="step active" id="step1">1 · Choisis une couleur</div>
 
-<aside>
-<h1>Your gesture</h1>
+  <div class="palette" id="palette"></div>
 
-<div class="step">1 — Choose a color</div>
-<div class="palette" id="palette"></div>
+  <div class="step" id="step2">2 · Place ton pixel</div>
+  <div class="step" id="step3">3 · Valide ton pixel</div>
 
-<div class="step">2 — Drop your fragment</div>
-<button id="drop" disabled>Drop pixel</button>
+  <button id="validate" disabled>VALIDER</button>
 
-<div class="step">3 — Validate</div>
-<button id="validate" disabled>Validate fragment</button>
-
-<div class="counter">
-Fragments remaining: <strong id="count">5</strong>
-</div>
-</aside>
-
-<div class="zone">
-<div class="frame" id="frame">
-<canvas id="canvas" width="1000" height="1000"></canvas>
+  <div style="margin-top:30px;opacity:0.6;">
+    Pixels restants : <span id="count">5</span>
+  </div>
 </div>
 
-<div class="loupe" id="loupe">
-<canvas id="zoom" width="2000" height="2000"></canvas>
-<div class="pointer"></div>
+<!-- ===== STAGE ===== -->
+<div id="stage">
+  <div id="frame">
+    <canvas id="canvas" width="1000" height="1000"></canvas>
+    <div id="loupe">
+      <canvas id="loupeCanvas" width="80" height="80"></canvas>
+      <div id="pointer"></div>
+    </div>
+  </div>
 </div>
-</div>
-
-</main>
 
 <script>
+/* ===== CONFIG ===== */
+let pixelsRemaining = 5;
+let currentColor = null;
+let pendingPixel = null;
+
+/* ===== CANVAS ===== */
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-const frame = document.getElementById("frame");
 
 const loupe = document.getElementById("loupe");
-const zoom = document.getElementById("zoom");
-const zctx = zoom.getContext("2d");
+const loupeCanvas = document.getElementById("loupeCanvas");
+const loupeCtx = loupeCanvas.getContext("2d");
 
-const dropBtn = document.getElementById("drop");
+/* ===== UI ===== */
+const paletteEl = document.getElementById("palette");
 const validateBtn = document.getElementById("validate");
 const countEl = document.getElementById("count");
 
-let remaining = 5;
-let color = null;
-let state = "color"; // color | drop | validate
-let pending = null;
-let locked = new Set();
-
-/* PALETTE */
+/* ===== PALETTE COLORS ===== */
 const colors = [
-"#ffffff","#dcdcdc","#999","#333",
-"#ff3b3b","#ff7b00","#ffd93d",
-"#00c853","#3bff8f","#2a9d8f",
-"#3bc7ff","#0096c7","#264653",
-"#9b59ff","#6c5ce7","#ff7bd8",
-"#d63384","#ef233c","#edf2f4",
-"#0b0b0b"
+  "#ffffff","#d4af37","#ff003c","#ff7a00","#ffd400",
+  "#00ff9c","#00c3ff","#5b5bff","#b000ff","#ff00c8",
+  "#8b4513","#222222"
 ];
 
-const palette = document.getElementById("palette");
-colors.forEach(c=>{
-  const d=document.createElement("div");
-  d.className="color";
-  d.style.background=c;
-  d.onclick=()=>{
-    if(state!=="color") return;
-    document.querySelectorAll(".color").forEach(x=>x.classList.remove("active"));
-    d.classList.add("active");
-    color=c;
-    dropBtn.disabled=false;
-    dropBtn.classList.add("active");
-    state="drop";
-  };
-  palette.appendChild(d);
+colors.forEach(c => {
+  const el = document.createElement("div");
+  el.className = "color";
+  el.style.background = c;
+  el.onclick = () => selectColor(c, el);
+  paletteEl.appendChild(el);
 });
 
-/* MOUSE MOVE */
-frame.addEventListener("mousemove",e=>{
-  if(state!=="drop") return;
+/* ===== COLOR SELECTION ===== */
+function selectColor(color, el) {
+  document.querySelectorAll(".color").forEach(c => c.classList.remove("active"));
+  el.classList.add("active");
+  currentColor = color;
+  document.getElementById("step1").classList.remove("active");
+  document.getElementById("step2").classList.add("active");
+}
+
+/* ===== MOUSE MOVE ===== */
+canvas.addEventListener("mousemove", e => {
+  if (!currentColor || pixelsRemaining <= 0) return;
 
   const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+  const x = Math.floor((e.clientX - rect.left) * (1000 / rect.width));
+  const y = Math.floor((e.clientY - rect.top) * (1000 / rect.height));
 
-  if(x<0||y<0||x>=rect.width||y>=rect.height){
-    loupe.style.display="none";
+  if (x < 0 || y < 0 || x >= 1000 || y >= 1000) {
+    loupe.style.display = "none";
     return;
   }
 
-  const scale = canvas.width / rect.width;
-  const px = Math.floor(x * scale);
-  const py = Math.floor(y * scale);
+  loupe.style.display = "block";
+  loupe.style.left = e.clientX - rect.left - 80 + "px";
+  loupe.style.top = e.clientY - rect.top - 80 + "px";
 
-  loupe.style.display="block";
-  loupe.style.left = (x - 80) + "px";
-  loupe.style.top = (y - 80) + "px";
+  loupeCtx.imageSmoothingEnabled = false;
+  loupeCtx.clearRect(0,0,80,80);
+  loupeCtx.drawImage(canvas, x-4, y-4, 8, 8, 0, 0, 80, 80);
 
-  zctx.clearRect(0,0,2000,2000);
-  zctx.drawImage(canvas, -px*2 + 80, -py*2 + 80);
-
-  pending = {x:px,y:py};
+  pendingPixel = {x,y};
 });
 
-/* DROP */
-dropBtn.onclick=()=>{
-  if(state!=="drop"||!pending) return;
+/* ===== DROP ===== */
+canvas.addEventListener("click", () => {
+  if (!pendingPixel || !currentColor) return;
+  validateBtn.disabled = false;
+  document.getElementById("step3").classList.add("active");
+});
 
-  const key=pending.x+","+pending.y;
-  if(locked.has(key)) return;
+/* ===== VALIDATE ===== */
+validateBtn.onclick = () => {
+  ctx.fillStyle = currentColor;
+  ctx.fillRect(pendingPixel.x, pendingPixel.y, 1, 1);
 
-  ctx.fillStyle=color;
-  ctx.fillRect(pending.x,pending.y,1,1);
+  pixelsRemaining--;
+  countEl.textContent = pixelsRemaining;
 
-  state="validate";
-  validateBtn.disabled=false;
-  validateBtn.classList.add("active");
-};
+  pendingPixel = null;
+  validateBtn.disabled = true;
 
-/* VALIDATE */
-validateBtn.onclick=()=>{
-  if(state!=="validate") return;
+  document.getElementById("step2").classList.remove("active");
+  document.getElementById("step3").classList.remove("active");
+  document.getElementById("step1").classList.add("active");
 
-  const key=pending.x+","+pending.y;
-  locked.add(key);
-
-  remaining--;
-  countEl.textContent=remaining;
-
-  // reset
-  pending=null;
-  color=null;
-  state="color";
-
-  document.querySelectorAll(".color").forEach(x=>x.classList.remove("active"));
-  dropBtn.disabled=true;
-  dropBtn.classList.remove("active");
-  validateBtn.disabled=true;
-  validateBtn.classList.remove("active");
-
-  if(remaining===0){
-    alert("Your contribution is complete.");
+  if (pixelsRemaining <= 0) {
+    canvas.style.cursor = "default";
+    loupe.style.display = "none";
   }
 };
 </script>
 
 </body>
 </html>
+
