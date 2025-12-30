@@ -2,13 +2,13 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Place your pixels</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Place your pixel</title>
 
 <style>
-/* ===== RESET ===== */
 body {
   margin: 0;
-  font-family: "Didot", "Bodoni Moda", serif;
+  font-family: "Didot", serif;
   background: #0b0b0b;
   color: #fff;
   display: flex;
@@ -16,7 +16,7 @@ body {
   overflow: hidden;
 }
 
-/* ===== LAYOUT ===== */
+/* UI */
 #ui {
   width: 280px;
   padding: 30px;
@@ -24,6 +24,46 @@ body {
   border-right: 1px solid rgba(255,255,255,0.08);
 }
 
+.step {
+  margin-bottom: 18px;
+  font-size: 14px;
+  opacity: 0.4;
+}
+.step.active { opacity: 1; }
+
+.palette {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  margin-bottom: 30px;
+}
+
+.color {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.2);
+  cursor: pointer;
+}
+.color.active {
+  border-color: white;
+  box-shadow: 0 0 10px currentColor;
+}
+
+button {
+  width: 100%;
+  padding: 14px;
+  background: transparent;
+  color: white;
+  border: 1px solid rgba(255,255,255,0.4);
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* STAGE */
 #stage {
   flex: 1;
   display: flex;
@@ -31,7 +71,6 @@ body {
   justify-content: center;
 }
 
-/* ===== CADRE OEUVRE ===== */
 #frame {
   position: relative;
   width: 1000px;
@@ -40,16 +79,14 @@ body {
   border: 2px solid rgba(255,255,255,0.25);
   box-shadow: 0 0 80px rgba(255,255,255,0.08);
   background: #111;
-  overflow: hidden;
   cursor: none;
 }
 
-/* ===== CANVAS ===== */
 canvas {
   image-rendering: pixelated;
 }
 
-/* ===== LOUPE ===== */
+/* LOUPE */
 #loupe {
   position: absolute;
   width: 160px;
@@ -67,78 +104,27 @@ canvas {
   height: 100%;
 }
 
-/* pointeur */
 #pointer {
   position: absolute;
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
   border-radius: 50%;
   background: white;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
 }
-
-/* ===== PALETTE ===== */
-.palette {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 10px;
-  margin-bottom: 30px;
-}
-
-.color {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.2);
-  cursor: pointer;
-}
-
-.color.active {
-  border: 2px solid white;
-  box-shadow: 0 0 12px currentColor;
-}
-
-/* ===== STEPS ===== */
-.step {
-  margin-bottom: 18px;
-  font-size: 14px;
-  opacity: 0.8;
-}
-
-.step.active {
-  opacity: 1;
-}
-
-/* ===== BUTTON ===== */
-button {
-  width: 100%;
-  padding: 14px;
-  font-size: 14px;
-  background: transparent;
-  color: white;
-  border: 1px solid rgba(255,255,255,0.4);
-  cursor: pointer;
-}
-
-button:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
 </style>
 </head>
 
 <body>
 
-<!-- ===== UI ===== -->
 <div id="ui">
-  <div class="step active" id="step1">1 · Choisis une couleur</div>
-
+  <div class="step active" id="s1">1 · Choisis une couleur</div>
   <div class="palette" id="palette"></div>
 
-  <div class="step" id="step2">2 · Place ton pixel</div>
-  <div class="step" id="step3">3 · Valide ton pixel</div>
+  <div class="step" id="s2">2 · Place ton pixel</div>
+  <div class="step" id="s3">3 · Valide</div>
 
   <button id="validate" disabled>VALIDER</button>
 
@@ -147,7 +133,6 @@ button:disabled {
   </div>
 </div>
 
-<!-- ===== STAGE ===== -->
 <div id="stage">
   <div id="frame">
     <canvas id="canvas" width="1000" height="1000"></canvas>
@@ -159,12 +144,13 @@ button:disabled {
 </div>
 
 <script>
-/* ===== CONFIG ===== */
+/* STATE */
 let pixelsRemaining = 5;
 let currentColor = null;
 let pendingPixel = null;
+const usedPixels = new Set();
 
-/* ===== CANVAS ===== */
+/* CANVAS */
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
@@ -172,83 +158,93 @@ const loupe = document.getElementById("loupe");
 const loupeCanvas = document.getElementById("loupeCanvas");
 const loupeCtx = loupeCanvas.getContext("2d");
 
-/* ===== UI ===== */
-const paletteEl = document.getElementById("palette");
+/* UI */
+const palette = document.getElementById("palette");
 const validateBtn = document.getElementById("validate");
 const countEl = document.getElementById("count");
 
-/* ===== PALETTE COLORS ===== */
+/* COLORS */
 const colors = [
   "#ffffff","#d4af37","#ff003c","#ff7a00","#ffd400",
   "#00ff9c","#00c3ff","#5b5bff","#b000ff","#ff00c8",
-  "#8b4513","#222222"
+  "#222222"
 ];
 
 colors.forEach(c => {
   const el = document.createElement("div");
   el.className = "color";
   el.style.background = c;
-  el.onclick = () => selectColor(c, el);
-  paletteEl.appendChild(el);
+  el.onclick = () => {
+    document.querySelectorAll(".color").forEach(x => x.classList.remove("active"));
+    el.classList.add("active");
+    currentColor = c;
+    document.getElementById("s1").classList.remove("active");
+    document.getElementById("s2").classList.add("active");
+  };
+  palette.appendChild(el);
 });
 
-/* ===== COLOR SELECTION ===== */
-function selectColor(color, el) {
-  document.querySelectorAll(".color").forEach(c => c.classList.remove("active"));
-  el.classList.add("active");
-  currentColor = color;
-  document.getElementById("step1").classList.remove("active");
-  document.getElementById("step2").classList.add("active");
-}
-
-/* ===== MOUSE MOVE ===== */
+/* MOVE */
 canvas.addEventListener("mousemove", e => {
   if (!currentColor || pixelsRemaining <= 0) return;
 
   const rect = canvas.getBoundingClientRect();
-  const x = Math.floor((e.clientX - rect.left) * (1000 / rect.width));
-  const y = Math.floor((e.clientY - rect.top) * (1000 / rect.height));
+  const x = Math.floor((e.clientX - rect.left) * 1000 / rect.width);
+  const y = Math.floor((e.clientY - rect.top) * 1000 / rect.height);
 
   if (x < 0 || y < 0 || x >= 1000 || y >= 1000) {
     loupe.style.display = "none";
+    pendingPixel = null;
+    return;
+  }
+
+  const key = x + "," + y;
+  if (usedPixels.has(key)) {
+    loupe.style.display = "none";
+    pendingPixel = null;
     return;
   }
 
   loupe.style.display = "block";
-  loupe.style.left = e.clientX - rect.left - 80 + "px";
-  loupe.style.top = e.clientY - rect.top - 80 + "px";
+  loupe.style.left = (e.clientX - rect.left - 80) + "px";
+  loupe.style.top = (e.clientY - rect.top - 80) + "px";
 
   loupeCtx.imageSmoothingEnabled = false;
   loupeCtx.clearRect(0,0,80,80);
   loupeCtx.drawImage(canvas, x-4, y-4, 8, 8, 0, 0, 80, 80);
 
-  pendingPixel = {x,y};
+  pendingPixel = { x, y };
 });
 
-/* ===== DROP ===== */
+/* CLICK = ARM VALIDATION */
 canvas.addEventListener("click", () => {
-  if (!pendingPixel || !currentColor) return;
+  if (!pendingPixel) return;
   validateBtn.disabled = false;
-  document.getElementById("step3").classList.add("active");
+  document.getElementById("s3").classList.add("active");
 });
 
-/* ===== VALIDATE ===== */
+/* VALIDATE */
 validateBtn.onclick = () => {
+  if (!pendingPixel || !currentColor || pixelsRemaining <= 0) return;
+
+  const key = pendingPixel.x + "," + pendingPixel.y;
+  if (usedPixels.has(key)) return;
+
   ctx.fillStyle = currentColor;
   ctx.fillRect(pendingPixel.x, pendingPixel.y, 1, 1);
 
+  usedPixels.add(key);
   pixelsRemaining--;
   countEl.textContent = pixelsRemaining;
 
   pendingPixel = null;
   validateBtn.disabled = true;
 
-  document.getElementById("step2").classList.remove("active");
-  document.getElementById("step3").classList.remove("active");
-  document.getElementById("step1").classList.add("active");
+  document.getElementById("s1").classList.add("active");
+  document.getElementById("s2").classList.remove("active");
+  document.getElementById("s3").classList.remove("active");
 
   if (pixelsRemaining <= 0) {
-    canvas.style.cursor = "default";
     loupe.style.display = "none";
   }
 };
