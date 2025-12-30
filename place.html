@@ -128,7 +128,7 @@ canvas { image-rendering: pixelated; }
 <script>
 let pixelsRemaining = 5;
 let currentColor = null;
-let pendingPixel = null;
+let targetPixel = null;
 const usedPixels = new Set();
 
 const canvas = document.getElementById("canvas");
@@ -166,47 +166,52 @@ canvas.addEventListener("mousemove", e => {
   if (!currentColor || pixelsRemaining <= 0) return;
 
   const rect = canvas.getBoundingClientRect();
-  const x = Math.floor((e.clientX - rect.left) * 1000 / rect.width);
-  const y = Math.floor((e.clientY - rect.top) * 1000 / rect.height);
+
+  // position du centre de la loupe
+  const centerX = e.clientX - rect.left;
+  const centerY = e.clientY - rect.top;
+
+  const x = Math.floor(centerX * 1000 / rect.width);
+  const y = Math.floor(centerY * 1000 / rect.height);
 
   if (x < 0 || y < 0 || x >= 1000 || y >= 1000) {
     loupe.style.display = "none";
-    pendingPixel = null;
+    targetPixel = null;
     return;
   }
 
   loupe.style.display = "block";
-  loupe.style.left = (e.clientX - rect.left - 80) + "px";
-  loupe.style.top = (e.clientY - rect.top - 80) + "px";
+  loupe.style.left = (centerX - 80) + "px";
+  loupe.style.top = (centerY - 80) + "px";
 
   loupeCtx.imageSmoothingEnabled = false;
   loupeCtx.clearRect(0,0,80,80);
   loupeCtx.drawImage(canvas, x-4, y-4, 8, 8, 0, 0, 80, 80);
 
   const key = x + "," + y;
-  pendingPixel = usedPixels.has(key) ? null : { x, y };
+  targetPixel = usedPixels.has(key) ? null : { x, y };
 });
 
 canvas.addEventListener("click", () => {
-  if (!pendingPixel) return;
+  if (!targetPixel) return;
   validateBtn.disabled = false;
   document.getElementById("s3").classList.add("active");
 });
 
 validateBtn.onclick = () => {
-  if (!pendingPixel || !currentColor || pixelsRemaining <= 0) return;
+  if (!targetPixel || !currentColor || pixelsRemaining <= 0) return;
 
-  const key = pendingPixel.x + "," + pendingPixel.y;
+  const key = targetPixel.x + "," + targetPixel.y;
   if (usedPixels.has(key)) return;
 
   ctx.fillStyle = currentColor;
-  ctx.fillRect(pendingPixel.x, pendingPixel.y, 1, 1);
+  ctx.fillRect(targetPixel.x, targetPixel.y, 1, 1);
 
   usedPixels.add(key);
   pixelsRemaining--;
   countEl.textContent = pixelsRemaining;
 
-  pendingPixel = null;
+  targetPixel = null;
   validateBtn.disabled = true;
 
   document.getElementById("s1").classList.add("active");
