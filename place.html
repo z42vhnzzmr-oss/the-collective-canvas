@@ -67,6 +67,7 @@ button:disabled { opacity: 0.3; cursor: not-allowed; }
   width: 1000px;
   height: 1000px;
   transform: scale(0.75);
+  transform-origin: center center;
   border: 2px solid rgba(255,255,255,0.25);
   box-shadow: 0 0 80px rgba(255,255,255,0.08);
   background: #111;
@@ -167,12 +168,14 @@ canvas.addEventListener("mousemove", e => {
 
   const rect = canvas.getBoundingClientRect();
 
-  // position du centre de la loupe
-  const centerX = e.clientX - rect.left;
-  const centerY = e.clientY - rect.top;
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
 
-  const x = Math.floor(centerX * 1000 / rect.width);
-  const y = Math.floor(centerY * 1000 / rect.height);
+  const localX = (e.clientX - rect.left) * scaleX;
+  const localY = (e.clientY - rect.top) * scaleY;
+
+  const x = Math.floor(localX);
+  const y = Math.floor(localY);
 
   if (x < 0 || y < 0 || x >= 1000 || y >= 1000) {
     loupe.style.display = "none";
@@ -181,12 +184,12 @@ canvas.addEventListener("mousemove", e => {
   }
 
   loupe.style.display = "block";
-  loupe.style.left = (centerX - 80) + "px";
-  loupe.style.top = (centerY - 80) + "px";
+  loupe.style.left = (e.clientX - rect.left - 80) + "px";
+  loupe.style.top  = (e.clientY - rect.top  - 80) + "px";
 
   loupeCtx.imageSmoothingEnabled = false;
   loupeCtx.clearRect(0,0,80,80);
-  loupeCtx.drawImage(canvas, x-4, y-4, 8, 8, 0, 0, 80, 80);
+  loupeCtx.drawImage(canvas, x - 4, y - 4, 8, 8, 0, 0, 80, 80);
 
   const key = x + "," + y;
   targetPixel = usedPixels.has(key) ? null : { x, y };
