@@ -11,39 +11,98 @@ body {
   background: #0b0b0b;
   color: #fff;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  flex-direction: row;
   height: 100vh;
   overflow: hidden;
 }
 
-/* Cadre canevas avec effet néon */
+/* UI */
+#ui {
+  width: 280px;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  background: linear-gradient(180deg, #0f0f0f, #070707);
+  border-right: 1px solid rgba(255,255,255,0.08);
+}
+
+.step { margin-bottom: 10px; font-size: 14px; opacity: 0.4; }
+.step.active { opacity: 1; }
+
+#palette {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.2);
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 30px;
+  position: relative;
+}
+
+.color {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  margin: 4px;
+  cursor: pointer;
+  border: 2px solid rgba(255,255,255,0.2);
+  box-sizing: border-box;
+}
+.color.active {
+  border-color: #fff;
+  box-shadow: 0 0 8px currentColor;
+}
+
+button {
+  width: 100%;
+  padding: 14px;
+  background: transparent;
+  color: white;
+  border: 1px solid rgba(255,255,255,0.4);
+  cursor: pointer;
+  margin-top: 20px;
+}
+button:disabled { opacity: 0.3; cursor: not-allowed; }
+
+#count {
+  margin-top: 20px;
+  font-size: 16px;
+  opacity: 0.7;
+}
+
+/* Canevas et loupe */
+#stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
 #frame {
   position: relative;
-  width: 750px; 
+  width: 750px;
   height: 750px;
-  border: 2px solid #00ffff;
-  box-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff33;
+  border: 2px solid rgba(255,255,255,0.25);
   background: #111;
   cursor: none;
   overflow: hidden;
 }
 
 canvas {
-  width: 100%; 
+  width: 100%;
   height: 100%;
   image-rendering: pixelated;
 }
 
-/* Loupe néon */
 #loupe {
   position: absolute;
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  border: 2px solid #ff00ff;
-  box-shadow: 0 0 10px #ff00ff, 0 0 20px #ff00ff33;
+  border: 2px solid rgba(255,255,255,0.7);
   pointer-events: none;
   overflow: hidden;
   display: none;
@@ -55,7 +114,6 @@ canvas {
   image-rendering: pixelated;
 }
 
-/* Petit point centre loupe avec glow */
 #centerDot {
   position: absolute;
   width: 6px;
@@ -65,87 +123,147 @@ canvas {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  box-shadow: 0 0 5px #fff, 0 0 10px #ff00ff66;
 }
 </style>
 </head>
 <body>
 
-<div id="frame">
-  <canvas id="canvas" width="1000" height="1000"></canvas>
-  <div id="loupe">
-    <canvas id="loupeCanvas" width="64" height="64"></canvas>
-    <div id="centerDot"></div>
+<div id="ui">
+  <div class="step active" id="s1">1 · Choisis une couleur</div>
+  <div id="palette"></div>
+  <div class="step" id="s2">2 · Place ton pixel</div>
+  <div class="step" id="s3">3 · Valide ton pixel</div>
+  <button id="validate" disabled>VALIDER</button>
+  <div id="count">Pixels restants : 5</div>
+</div>
+
+<div id="stage">
+  <div id="frame">
+    <canvas id="canvas" width="1000" height="1000"></canvas>
+    <div id="loupe">
+      <canvas id="loupeCanvas" width="64" height="64"></canvas>
+      <div id="centerDot"></div>
+    </div>
   </div>
 </div>
 
 <script>
-// ==== Variables ====
+// ==== CONFIG ====
+let purchasedPixels = 5; // ici on définit combien l'utilisateur a acheté (1,5,10,20)
+let pixelsRemaining = purchasedPixels;
+let currentColor = null;
+let targetPixel = null;
+const usedPixels = new Set();
+const zoom = 4;
+
+// ==== CANVAS ====
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
+
+// ==== LOUPES ====
 const loupe = document.getElementById("loupe");
 const loupeCanvas = document.getElementById("loupeCanvas");
 const loupeCtx = loupeCanvas.getContext("2d");
-
-let currentColor = "#ffffff";
-let pixelsRemaining = 50;
-let targetPixel = null;
-const usedPixels = new Set();
-
-const zoom = 4;
-
-// ==== Mouvement souris ====
 const frame = document.getElementById("frame");
 
-frame.addEventListener("mousemove", e => {
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
+// ==== PALETTE ====
+const colors = [
+  "#ffffff","#d4af37","#ff003c","#ff7a00","#ffd400",
+  "#00ff9c","#00c3ff","#5b5bff","#b000ff","#ff00c8",
+  "#8b4513","#222222"
+];
+const paletteEl = document.getElementById("palette");
 
-    let x = Math.floor((e.clientX - rect.left) * scaleX);
-    let y = Math.floor((e.clientY - rect.top) * scaleY);
-
-    if (x < 0) x = 0;
-    if (y < 0) y = 0;
-    if (x >= canvas.width) x = canvas.width-1;
-    if (y >= canvas.height) y = canvas.height-1;
-
-    const key = x + "," + y;
-    targetPixel = usedPixels.has(key) ? null : {x, y};
-
-    // Position loupe
-    loupe.style.display = "block";
-    loupe.style.left = (e.clientX - rect.left - loupe.offsetWidth/2) + "px";
-    loupe.style.top  = (e.clientY - rect.top - loupe.offsetHeight/2) + "px";
-
-    // Zoom dans la loupe
-    loupeCtx.clearRect(0,0,64,64);
-    loupeCtx.imageSmoothingEnabled = false;
-
-    let sx = x - 8;
-    let sy = y - 8;
-    if (sx < 0) sx = 0;
-    if (sy < 0) sy = 0;
-    let sw = 16;
-    let sh = 16;
-    if (sx+sw > canvas.width) sw = canvas.width - sx;
-    if (sy+sh > canvas.height) sh = canvas.height - sy;
-
-    loupeCtx.drawImage(canvas, sx, sy, sw, sh, 0, 0, loupeCanvas.width, loupeCanvas.height);
+colors.forEach(c => {
+  const el = document.createElement("div");
+  el.className = "color";
+  el.style.background = c;
+  el.onclick = () => {
+    document.querySelectorAll(".color").forEach(x => x.classList.remove("active"));
+    el.classList.add("active");
+    currentColor = c;
+    document.getElementById("s1").classList.remove("active");
+    document.getElementById("s2").classList.add("active");
+  };
+  paletteEl.appendChild(el);
 });
 
-// ==== Click pour poser pixel ====
-frame.addEventListener("click", e => {
-    if(!targetPixel || pixelsRemaining <=0) return;
-    const key = targetPixel.x + "," + targetPixel.y;
-    if(usedPixels.has(key)) return;
+// ==== MISE A JOUR COMPTEUR ====
+const countEl = document.getElementById("count");
+function updateCounter() {
+  countEl.textContent = "Pixels restants : " + pixelsRemaining;
+}
+updateCounter();
 
-    ctx.fillStyle = currentColor;
-    ctx.fillRect(targetPixel.x, targetPixel.y,1,1);
-    usedPixels.add(key);
-    pixelsRemaining--;
+// ==== MOUVEMENT SOURIS ====
+frame.addEventListener("mousemove", e => {
+  if (!currentColor || pixelsRemaining <= 0) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+
+  let x = Math.floor((e.clientX - rect.left) * scaleX);
+  let y = Math.floor((e.clientY - rect.top) * scaleY);
+
+  if (x < 0) x = 0;
+  if (y < 0) y = 0;
+  if (x >= canvas.width) x = canvas.width-1;
+  if (y >= canvas.height) y = canvas.height-1;
+
+  const key = x + "," + y;
+  targetPixel = usedPixels.has(key) ? null : {x, y};
+
+  loupe.style.display = "block";
+  loupe.style.left = (e.clientX - rect.left - loupe.offsetWidth/2) + "px";
+  loupe.style.top  = (e.clientY - rect.top - loupe.offsetHeight/2) + "px";
+
+  loupeCtx.clearRect(0,0,64,64);
+  loupeCtx.imageSmoothingEnabled = false;
+
+  let sx = x - 8;
+  let sy = y - 8;
+  if (sx < 0) sx = 0;
+  if (sy < 0) sy = 0;
+  let sw = 16;
+  let sh = 16;
+  if (sx+sw > canvas.width) sw = canvas.width - sx;
+  if (sy+sh > canvas.height) sh = canvas.height - sy;
+
+  loupeCtx.drawImage(canvas, sx, sy, sw, sh, 0, 0, loupeCanvas.width, loupeCanvas.height);
+});
+
+// ==== VALIDATION ====
+const validateBtn = document.getElementById("validate");
+frame.addEventListener("click", e => {
+  if (!targetPixel) return;
+  validateBtn.disabled = false;
+});
+
+validateBtn.addEventListener("click", () => {
+  if (!targetPixel || !currentColor) return;
+
+  const key = targetPixel.x + "," + targetPixel.y;
+  if (usedPixels.has(key)) return;
+
+  ctx.fillStyle = currentColor;
+  ctx.fillRect(targetPixel.x, targetPixel.y,1,1);
+  usedPixels.add(key);
+
+  pixelsRemaining--;
+  updateCounter();
+  targetPixel = null;
+  validateBtn.disabled = true;
+
+  document.getElementById("s1").classList.add("active");
+  document.getElementById("s2").classList.remove("active");
+  document.getElementById("s3").classList.remove("active");
+
+  if (pixelsRemaining <= 0) {
+    loupe.style.display = "none";
+    frame.style.cursor = "default";
+  }
 });
 </script>
-
 </body>
 </html>
