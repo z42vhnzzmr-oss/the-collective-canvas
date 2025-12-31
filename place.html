@@ -6,125 +6,115 @@
 <title>Place your pixel</title>
 
 <style>
-:root{
-  --bg:#0b0b0b;
-  --panel:#0f0f0f;
-  --frame:#ffffff4d;
-  --text:#f5f5f5;
-  --muted:#888;
+/* ================== GLOBAL ================== */
+body {
+  margin: 0;
+  font-family: "Didot", serif;
+  background: #0b0b0b;
+  color: #fff;
+  height: 100vh;
+  display: flex;
+  align-items: center;
 }
 
-*{box-sizing:border-box}
-
-body{
-  margin:0;
-  font-family:"Didot",serif;
-  background:var(--bg);
-  color:var(--text);
-  display:flex;
-  height:100vh;
-  overflow:hidden;
+/* ================== LAYOUT ================== */
+#container {
+  display: flex;
+  align-items: center;
+  width: 100%;
 }
 
-/* ===== LEFT UI ===== */
-#left {
-  width:220px;
-  padding:32px;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-}
-
-.palette {
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:14px;
+/* ================== PALETTE ================== */
+#palette {
+  width: 90px;
+  padding-left: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .color {
-  width:42px;
-  height:42px;
-  border-radius:50%;
-  border:1px solid rgba(255,255,255,.25);
-  cursor:pointer;
-  transition:transform .2s, box-shadow .2s;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.15);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .color:hover {
-  transform:scale(1.08);
+  transform: scale(1.15);
+  box-shadow: 0 0 0 4px rgba(255,255,255,0.05);
 }
 
 .color.active {
-  box-shadow:0 0 14px currentColor;
-  transform:scale(1.15);
+  box-shadow: 0 0 0 5px rgba(255,255,255,0.12);
 }
 
-/* ===== STAGE ===== */
-#stage{
-  flex:1;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+/* ================== CANVAS FRAME ================== */
+#frame {
+  position: relative;
+  width: 750px;
+  height: 750px;
+  border: 2px solid rgba(255,255,255,0.25);
+  background: #111;
+  cursor: none;
+  overflow: hidden;
 }
 
-/* Cadre canevas */
-#frame{
-  position:relative;
-  width:750px;
-  height:750px;
-  border:2px solid rgba(255,255,255,0.3);
-  background:#111;
-  cursor:none;
-  overflow:hidden;
+canvas {
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
 }
 
-canvas{
-  width:100%;
-  height:100%;
-  image-rendering:pixelated;
+/* ================== LOUPE ================== */
+#loupe {
+  position: absolute;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.7);
+  pointer-events: none;
+  overflow: hidden;
+  display: none;
 }
 
-/* ===== LOUPE ===== */
-#loupe{
-  position:absolute;
-  width:64px;
-  height:64px;
-  border-radius:50%;
-  border:2px solid rgba(255,255,255,0.7);
-  pointer-events:none;
-  overflow:hidden;
-  display:none;
+#loupe canvas {
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
 }
 
-#loupe canvas{
-  width:100%;
-  height:100%;
-  image-rendering:pixelated;
-}
-
-/* Centre loupe */
-#centerDot{
-  position:absolute;
-  width:4px;
-  height:4px;
-  background:white;
-  border-radius:50%;
-  top:50%;
-  left:50%;
-  transform:translate(-50%,-50%);
+#centerDot {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: white;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 </style>
 </head>
 
 <body>
 
-<!-- ===== LEFT PANEL ===== -->
-<div id="left">
-  <div class="palette" id="palette"></div>
-</div>
+<div id="container">
 
-<!-- ===== STAGE ===== -->
-<div id="stage">
+  <!-- PALETTE -->
+  <div id="palette">
+    <div class="color active" data-color="#ffffff" style="background:#ffffff"></div>
+    <div class="color" data-color="#d8d2c8" style="background:#d8d2c8"></div>
+    <div class="color" data-color="#b49a6c" style="background:#b49a6c"></div>
+    <div class="color" data-color="#7a2e2e" style="background:#7a2e2e"></div>
+    <div class="color" data-color="#1f3a5f" style="background:#1f3a5f"></div>
+    <div class="color" data-color="#1f5f3a" style="background:#1f5f3a"></div>
+    <div class="color" data-color="#111111" style="background:#111111"></div>
+  </div>
+
+  <!-- FRAME -->
   <div id="frame">
     <canvas id="canvas" width="1000" height="1000"></canvas>
 
@@ -133,110 +123,72 @@ canvas{
       <div id="centerDot"></div>
     </div>
   </div>
+
 </div>
 
 <script>
-// ===================================================
-// === NOYAU CANVAS — STRICTEMENT IDENTIQUE =========
-// ===================================================
-
-// ==== Variables ====
+/* ================== CANVAS SETUP ================== */
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
+
 const loupe = document.getElementById("loupe");
 const loupeCanvas = document.getElementById("loupeCanvas");
 const loupeCtx = loupeCanvas.getContext("2d");
 
-let currentColor = "#ffffff"; // modifié UNIQUEMENT par la palette
-let pixelsRemaining = 50;
+let currentColor = "#ffffff";
 let targetPixel = null;
 const usedPixels = new Set();
-const zoom = 4;
 
-// ==== Mouvement souris ====
+/* ================== PALETTE LOGIC ================== */
+document.querySelectorAll(".color").forEach(c => {
+  c.addEventListener("click", () => {
+    document.querySelectorAll(".color").forEach(x => x.classList.remove("active"));
+    c.classList.add("active");
+    currentColor = c.dataset.color;
+  });
+});
+
+/* ================== LOUPE & MOVE ================== */
 const frame = document.getElementById("frame");
 
 frame.addEventListener("mousemove", e => {
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
 
-    let centerX = e.clientX - rect.left;
-    let centerY = e.clientY - rect.top;
+  let centerX = e.clientX - rect.left;
+  let centerY = e.clientY - rect.top;
 
-    let x = Math.floor(centerX * scaleX);
-    let y = Math.floor(centerY * scaleY);
+  let x = Math.floor(centerX * scaleX);
+  let y = Math.floor(centerY * scaleY);
 
-    if (x < 0) x = 0;
-    if (y < 0) y = 0;
-    if (x >= canvas.width) x = canvas.width-1;
-    if (y >= canvas.height) y = canvas.height-1;
+  x = Math.max(0, Math.min(canvas.width - 1, x));
+  y = Math.max(0, Math.min(canvas.height - 1, y));
 
-    const key = x + "," + y;
-    targetPixel = usedPixels.has(key) ? null : {x, y};
+  targetPixel = { x, y };
 
-    loupe.style.display = "block";
-    loupe.style.left = (centerX - loupe.offsetWidth/2) + "px";
-    loupe.style.top  = (centerY - loupe.offsetHeight/2) + "px";
+  loupe.style.display = "block";
+  loupe.style.left = (centerX - 32) + "px";
+  loupe.style.top  = (centerY - 32) + "px";
 
-    loupeCtx.clearRect(0,0,64,64);
-    loupeCtx.imageSmoothingEnabled = false;
+  loupeCtx.imageSmoothingEnabled = false;
+  loupeCtx.clearRect(0,0,64,64);
 
-    let sx = x - 8;
-    let sy = y - 8;
-    if (sx < 0) sx = 0;
-    if (sy < 0) sy = 0;
-    let sw = 16;
-    let sh = 16;
-    if (sx + sw > canvas.width) sw = canvas.width - sx;
-    if (sy + sh > canvas.height) sh = canvas.height - sy;
+  let sx = Math.max(0, x - 8);
+  let sy = Math.max(0, y - 8);
 
-    loupeCtx.drawImage(canvas, sx, sy, sw, sh, 0, 0, loupeCanvas.width, loupeCanvas.height);
+  loupeCtx.drawImage(canvas, sx, sy, 16, 16, 0, 0, 64, 64);
 });
 
-// ==== Click pour poser pixel ====
+/* ================== DROP PIXEL ================== */
 frame.addEventListener("click", () => {
-    if(!targetPixel || pixelsRemaining <=0) return;
-    const key = targetPixel.x + "," + targetPixel.y;
-    if(usedPixels.has(key)) return;
+  if (!targetPixel) return;
+  const key = targetPixel.x + "," + targetPixel.y;
+  if (usedPixels.has(key)) return;
 
-    ctx.fillStyle = currentColor;
-    ctx.fillRect(targetPixel.x, targetPixel.y,1,1);
-    usedPixels.add(key);
-    pixelsRemaining--;
-});
-
-// ===================================================
-// === PALETTE — UI ONLY =============================
-// ===================================================
-
-const paletteColors = [
-  "#ffffff",
-  "#d4af37",
-  "#ff3b3b",
-  "#ff9500",
-  "#ffd60a",
-  "#34c759",
-  "#0a84ff",
-  "#5e5ce6",
-  "#bf5af2"
-];
-
-const palette = document.getElementById("palette");
-
-paletteColors.forEach((color, i)=>{
-  const d = document.createElement("div");
-  d.className = "color";
-  d.style.background = color;
-
-  d.onclick = ()=>{
-    document.querySelectorAll(".color").forEach(c=>c.classList.remove("active"));
-    d.classList.add("active");
-    currentColor = color;
-  };
-
-  if(i===0) d.classList.add("active");
-  palette.appendChild(d);
+  ctx.fillStyle = currentColor;
+  ctx.fillRect(targetPixel.x, targetPixel.y, 1, 1);
+  usedPixels.add(key);
 });
 </script>
 
