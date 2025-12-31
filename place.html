@@ -17,6 +17,12 @@ body {
   overflow: hidden;
 }
 
+/* Container pour palette + canevas */
+#container {
+  display: flex;
+  gap: 20px;
+}
+
 /* Cadre canevas */
 #frame {
   position: relative;
@@ -63,15 +69,43 @@ canvas {
   left: 50%;
   transform: translate(-50%, -50%);
 }
+
+/* Palette circulaire */
+#palette {
+  width: 150px;
+  height: 150px;
+  cursor: pointer;
+}
+#paletteCanvas {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+#paletteIndicator {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 2px solid white;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
 </style>
 </head>
 <body>
 
-<div id="frame">
-  <canvas id="canvas" width="1000" height="1000"></canvas>
-  <div id="loupe">
-    <canvas id="loupeCanvas" width="64" height="64"></canvas>
-    <div id="centerDot"></div>
+<div id="container">
+  <div id="palette">
+    <canvas id="paletteCanvas" width="150" height="150"></canvas>
+    <div id="paletteIndicator"></div>
+  </div>
+
+  <div id="frame">
+    <canvas id="canvas" width="1000" height="1000"></canvas>
+    <div id="loupe">
+      <canvas id="loupeCanvas" width="64" height="64"></canvas>
+      <div id="centerDot"></div>
+    </div>
   </div>
 </div>
 
@@ -82,22 +116,71 @@ const ctx = canvas.getContext("2d");
 const loupe = document.getElementById("loupe");
 const loupeCanvas = document.getElementById("loupeCanvas");
 const loupeCtx = loupeCanvas.getContext("2d");
+const paletteCanvas = document.getElementById("paletteCanvas");
+const paletteCtx = paletteCanvas.getContext("2d");
+const paletteIndicator = document.getElementById("paletteIndicator");
 
 let currentColor = "#ffffff"; // couleur par défaut
 let pixelsRemaining = 50;
 let targetPixel = null;
 const usedPixels = new Set();
-const zoom = 4; // zoom x4 dans la loupe
+const zoom = 4;
+
+// ==== Création palette circulaire ====
+const paletteColors = [
+  "#ffffff","#ff0000","#ff7f00","#ffff00","#00ff00","#00ffff","#0000ff","#8b00ff"
+];
+
+const cx = paletteCanvas.width / 2;
+const cy = paletteCanvas.height / 2;
+const radius = paletteCanvas.width / 2 - 10;
+
+function drawPalette() {
+  const len = paletteColors.length;
+  for (let i=0; i<len; i++) {
+    const angle = (i / len) * Math.PI * 2;
+    const x = cx + radius * Math.cos(angle);
+    const y = cy + radius * Math.sin(angle);
+    paletteCtx.beginPath();
+    paletteCtx.arc(x, y, 15, 0, Math.PI*2);
+    paletteCtx.fillStyle = paletteColors[i];
+    paletteCtx.fill();
+  }
+}
+drawPalette();
+
+// ==== Sélection couleur ====
+paletteCanvas.addEventListener("click", e => {
+  const rect = paletteCanvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  let closestDist = Infinity;
+  let chosenColor = currentColor;
+
+  paletteColors.forEach(c => {
+    // retrouver coordonnées du cercle de cette couleur
+    const i = paletteColors.indexOf(c);
+    const angle = (i / paletteColors.length) * Math.PI * 2;
+    const cxCol = cx + radius * Math.cos(angle);
+    const cyCol = cy + radius * Math.sin(angle);
+    const dist = Math.hypot(x - cxCol, y - cyCol);
+    if(dist < closestDist) {
+      closestDist = dist;
+      chosenColor = c;
+      paletteIndicator.style.left = cxCol + "px";
+      paletteIndicator.style.top = cyCol + "px";
+    }
+  });
+  currentColor = chosenColor;
+});
 
 // ==== Mouvement souris ====
 const frame = document.getElementById("frame");
-
 frame.addEventListener("mousemove", e => {
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
 
-    // Centre du rond de la loupe
     let centerX = e.clientX - rect.left;
     let centerY = e.clientY - rect.top;
 
@@ -121,7 +204,6 @@ frame.addEventListener("mousemove", e => {
     loupeCtx.clearRect(0,0,64,64);
     loupeCtx.imageSmoothingEnabled = false;
 
-    // zone 16x16 autour du pixel central pour zoom
     let sx = x - 8;
     let sy = y - 8;
     if (sx < 0) sx = 0;
@@ -149,4 +231,5 @@ frame.addEventListener("click", e => {
 
 </body>
 </html>
+
 
