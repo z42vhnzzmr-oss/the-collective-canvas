@@ -3,178 +3,127 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Collective Canvas — Place your pixel</title>
+<title>Place your pixel</title>
 
 <style>
-:root {
+:root{
   --bg:#0b0b0b;
   --panel:#0f0f0f;
-  --frame:#ffffff44;
+  --frame:#ffffff4d;
   --text:#f5f5f5;
   --muted:#888;
-  --accent:#ffffff;
 }
 
-* { box-sizing:border-box; }
+*{box-sizing:border-box}
 
-body {
+body{
   margin:0;
-  height:100vh;
+  font-family:"Didot",serif;
   background:var(--bg);
   color:var(--text);
-  font-family:"Didot", serif;
   display:flex;
-  align-items:center;
+  height:100vh;
+  overflow:hidden;
 }
 
-/* ===== LEFT PANEL ===== */
-#panel {
+/* ===== LEFT UI ===== */
+#left {
   width:220px;
-  padding:30px;
+  padding:32px;
   display:flex;
   flex-direction:column;
-  gap:30px;
+  justify-content:center;
 }
 
-/* Palette */
 .palette {
   display:grid;
   grid-template-columns:repeat(3,1fr);
-  gap:12px;
+  gap:14px;
 }
 
 .color {
   width:42px;
   height:42px;
   border-radius:50%;
+  border:1px solid rgba(255,255,255,.25);
   cursor:pointer;
-  border:1px solid rgba(255,255,255,0.2);
   transition:transform .2s, box-shadow .2s;
+}
+
+.color:hover {
+  transform:scale(1.08);
 }
 
 .color.active {
   box-shadow:0 0 14px currentColor;
-  transform:scale(1.1);
-}
-
-/* Counter */
-.counter {
-  font-size:14px;
-  color:var(--muted);
-}
-
-.counter strong {
-  color:var(--text);
-  font-size:22px;
-}
-
-/* Validate */
-button {
-  margin-top:auto;
-  padding:14px;
-  background:transparent;
-  border:1px solid rgba(255,255,255,.4);
-  color:var(--text);
-  cursor:pointer;
-  transition:.3s;
-}
-
-button:hover:not(:disabled) {
-  background:#fff;
-  color:#000;
-}
-
-button:disabled {
-  opacity:.3;
-  cursor:not-allowed;
+  transform:scale(1.15);
 }
 
 /* ===== STAGE ===== */
-#stage {
+#stage{
   flex:1;
   display:flex;
+  align-items:center;
   justify-content:center;
 }
 
-#frame {
+/* Cadre canevas */
+#frame{
   position:relative;
   width:750px;
   height:750px;
+  border:2px solid rgba(255,255,255,0.3);
   background:#111;
-  border:2px solid var(--frame);
-  overflow:hidden;
   cursor:none;
+  overflow:hidden;
 }
 
-canvas {
+canvas{
   width:100%;
   height:100%;
   image-rendering:pixelated;
 }
 
 /* ===== LOUPE ===== */
-#loupe {
+#loupe{
   position:absolute;
   width:64px;
   height:64px;
   border-radius:50%;
-  border:1px solid rgba(255,255,255,.7);
+  border:2px solid rgba(255,255,255,0.7);
   pointer-events:none;
-  display:none;
   overflow:hidden;
+  display:none;
 }
 
-#loupe canvas {
+#loupe canvas{
   width:100%;
   height:100%;
   image-rendering:pixelated;
 }
 
-#centerDot {
+/* Centre loupe */
+#centerDot{
   position:absolute;
   width:4px;
   height:4px;
-  background:#fff;
+  background:white;
   border-radius:50%;
   top:50%;
   left:50%;
   transform:translate(-50%,-50%);
-}
-
-/* ===== UPSELL ===== */
-#upsell {
-  position:absolute;
-  bottom:30px;
-  left:50%;
-  transform:translateX(-50%);
-  font-size:14px;
-  color:var(--muted);
-  opacity:0;
-  transition:.6s;
-  pointer-events:none;
-}
-#upsell.show { opacity:1; }
-#upsell span {
-  color:var(--text);
-  cursor:pointer;
-  border-bottom:1px solid rgba(255,255,255,.3);
 }
 </style>
 </head>
 
 <body>
 
-<div id="panel">
+<!-- ===== LEFT PANEL ===== -->
+<div id="left">
   <div class="palette" id="palette"></div>
-
-  <div class="counter">
-    Pixels restants<br>
-    <strong id="count">5</strong>
-  </div>
-
-  <button id="validate" disabled>VALIDER</button>
 </div>
 
+<!-- ===== STAGE ===== -->
 <div id="stage">
   <div id="frame">
     <canvas id="canvas" width="1000" height="1000"></canvas>
@@ -183,111 +132,117 @@ canvas {
       <canvas id="loupeCanvas" width="64" height="64"></canvas>
       <div id="centerDot"></div>
     </div>
-
-    <div id="upsell">
-      Il reste encore de la place.<br>
-      <span>Ajouter un geste</span>
-    </div>
   </div>
 </div>
 
 <script>
-/* ===== CONFIG ===== */
-let pixelsRemaining = 5; // ← lié à l'achat
-let currentColor = "#ffffff";
-let targetPixel = null;
-const used = new Set();
-const zoom = 4;
+// ===================================================
+// === NOYAU CANVAS — STRICTEMENT IDENTIQUE =========
+// ===================================================
 
-/* ===== ELEMENTS ===== */
+// ==== Variables ====
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const loupe = document.getElementById("loupe");
-const loupeCtx = document.getElementById("loupeCanvas").getContext("2d");
-const frame = document.getElementById("frame");
-const validate = document.getElementById("validate");
-const countEl = document.getElementById("count");
-const upsell = document.getElementById("upsell");
+const loupeCanvas = document.getElementById("loupeCanvas");
+const loupeCtx = loupeCanvas.getContext("2d");
 
-/* ===== PALETTE ===== */
-const colors = [
-  "#ffffff","#d4af37","#ff3b3b",
-  "#ff9500","#ffd60a","#34c759",
-  "#0a84ff","#5e5ce6","#bf5af2"
+let currentColor = "#ffffff"; // modifié UNIQUEMENT par la palette
+let pixelsRemaining = 50;
+let targetPixel = null;
+const usedPixels = new Set();
+const zoom = 4;
+
+// ==== Mouvement souris ====
+const frame = document.getElementById("frame");
+
+frame.addEventListener("mousemove", e => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    let centerX = e.clientX - rect.left;
+    let centerY = e.clientY - rect.top;
+
+    let x = Math.floor(centerX * scaleX);
+    let y = Math.floor(centerY * scaleY);
+
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
+    if (x >= canvas.width) x = canvas.width-1;
+    if (y >= canvas.height) y = canvas.height-1;
+
+    const key = x + "," + y;
+    targetPixel = usedPixels.has(key) ? null : {x, y};
+
+    loupe.style.display = "block";
+    loupe.style.left = (centerX - loupe.offsetWidth/2) + "px";
+    loupe.style.top  = (centerY - loupe.offsetHeight/2) + "px";
+
+    loupeCtx.clearRect(0,0,64,64);
+    loupeCtx.imageSmoothingEnabled = false;
+
+    let sx = x - 8;
+    let sy = y - 8;
+    if (sx < 0) sx = 0;
+    if (sy < 0) sy = 0;
+    let sw = 16;
+    let sh = 16;
+    if (sx + sw > canvas.width) sw = canvas.width - sx;
+    if (sy + sh > canvas.height) sh = canvas.height - sy;
+
+    loupeCtx.drawImage(canvas, sx, sy, sw, sh, 0, 0, loupeCanvas.width, loupeCanvas.height);
+});
+
+// ==== Click pour poser pixel ====
+frame.addEventListener("click", () => {
+    if(!targetPixel || pixelsRemaining <=0) return;
+    const key = targetPixel.x + "," + targetPixel.y;
+    if(usedPixels.has(key)) return;
+
+    ctx.fillStyle = currentColor;
+    ctx.fillRect(targetPixel.x, targetPixel.y,1,1);
+    usedPixels.add(key);
+    pixelsRemaining--;
+});
+
+// ===================================================
+// === PALETTE — UI ONLY =============================
+// ===================================================
+
+const paletteColors = [
+  "#ffffff",
+  "#d4af37",
+  "#ff3b3b",
+  "#ff9500",
+  "#ffd60a",
+  "#34c759",
+  "#0a84ff",
+  "#5e5ce6",
+  "#bf5af2"
 ];
 
 const palette = document.getElementById("palette");
-colors.forEach(c=>{
-  const d=document.createElement("div");
-  d.className="color";
-  d.style.background=c;
-  d.onclick=()=>{
-    document.querySelectorAll(".color").forEach(x=>x.classList.remove("active"));
+
+paletteColors.forEach((color, i)=>{
+  const d = document.createElement("div");
+  d.className = "color";
+  d.style.background = color;
+
+  d.onclick = ()=>{
+    document.querySelectorAll(".color").forEach(c=>c.classList.remove("active"));
     d.classList.add("active");
-    currentColor=c;
+    currentColor = color;
   };
+
+  if(i===0) d.classList.add("active");
   palette.appendChild(d);
 });
-palette.firstChild.click();
-
-/* ===== MOUSE MOVE ===== */
-frame.addEventListener("mousemove",e=>{
-  const rect=canvas.getBoundingClientRect();
-  const scale=canvas.width/rect.width;
-
-  const cx=e.clientX-rect.left;
-  const cy=e.clientY-rect.top;
-
-  let x=Math.floor(cx*scale);
-  let y=Math.floor(cy*scale);
-
-  if(x<0||y<0||x>=1000||y>=1000) return;
-
-  targetPixel={x,y};
-
-  loupe.style.display="block";
-  loupe.style.left=cx-32+"px";
-  loupe.style.top =cy-32+"px";
-
-  loupeCtx.imageSmoothingEnabled=false;
-  loupeCtx.clearRect(0,0,64,64);
-  loupeCtx.drawImage(canvas,x-8,y-8,16,16,0,0,64,64);
-});
-
-/* ===== CLICK ===== */
-frame.addEventListener("click",()=>{
-  if(!targetPixel||pixelsRemaining<=0) return;
-  validate.disabled=false;
-});
-
-/* ===== VALIDATE ===== */
-validate.onclick=()=>{
-  const key=targetPixel.x+","+targetPixel.y;
-  if(used.has(key)) return;
-
-  ctx.fillStyle=currentColor;
-  ctx.fillRect(targetPixel.x,targetPixel.y,1,1);
-  used.add(key);
-
-  pixelsRemaining--;
-  countEl.textContent=pixelsRemaining;
-  validate.disabled=true;
-
-  if(pixelsRemaining===0){
-    upsell.classList.add("show");
-  }
-};
-
-/* ===== UPSELL ACTION ===== */
-upsell.querySelector("span").onclick=()=>{
-  pixelsRemaining+=5;
-  countEl.textContent=pixelsRemaining;
-  upsell.classList.remove("show");
-};
 </script>
 
 </body>
 </html>
+
 
 
 
