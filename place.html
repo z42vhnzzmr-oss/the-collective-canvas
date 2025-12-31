@@ -17,13 +17,12 @@ body {
   overflow: hidden;
 }
 
-/* Container pour palette + canevas */
 #container {
   display: flex;
   gap: 20px;
 }
 
-/* Cadre canevas */
+/* Canevas principal */
 #frame {
   position: relative;
   width: 750px;
@@ -58,7 +57,6 @@ canvas {
   image-rendering: pixelated;
 }
 
-/* Petit rond centre de loupe */
 #centerDot {
   position: absolute;
   width: 4px;
@@ -70,25 +68,31 @@ canvas {
   transform: translate(-50%, -50%);
 }
 
-/* Palette circulaire */
+/* Nuancier élégant rectangulaire */
 #palette {
-  width: 150px;
-  height: 150px;
+  position: relative;
+  width: 200px;
+  height: 200px;
+  border-radius: 12px;
+  overflow: hidden;
   cursor: pointer;
+  border: 2px solid rgba(255,255,255,0.3);
 }
+
 #paletteCanvas {
   width: 100%;
   height: 100%;
-  border-radius: 50%;
 }
+
 #paletteIndicator {
   position: absolute;
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   border: 2px solid white;
   border-radius: 50%;
   transform: translate(-50%, -50%);
   pointer-events: none;
+  box-shadow: 0 0 5px white;
 }
 </style>
 </head>
@@ -96,7 +100,7 @@ canvas {
 
 <div id="container">
   <div id="palette">
-    <canvas id="paletteCanvas" width="150" height="150"></canvas>
+    <canvas id="paletteCanvas" width="200" height="200"></canvas>
     <div id="paletteIndicator"></div>
   </div>
 
@@ -116,36 +120,47 @@ const ctx = canvas.getContext("2d");
 const loupe = document.getElementById("loupe");
 const loupeCanvas = document.getElementById("loupeCanvas");
 const loupeCtx = loupeCanvas.getContext("2d");
+
 const paletteCanvas = document.getElementById("paletteCanvas");
 const paletteCtx = paletteCanvas.getContext("2d");
 const paletteIndicator = document.getElementById("paletteIndicator");
 
-let currentColor = "#ffffff"; // couleur par défaut
+let currentColor = "#ffffff";
 let pixelsRemaining = 50;
 let targetPixel = null;
 const usedPixels = new Set();
 const zoom = 4;
 
-// ==== Création palette circulaire ====
-const paletteColors = [
-  "#ffffff","#ff0000","#ff7f00","#ffff00","#00ff00","#00ffff","#0000ff","#8b00ff"
-];
-
-const cx = paletteCanvas.width / 2;
-const cy = paletteCanvas.height / 2;
-const radius = paletteCanvas.width / 2 - 10;
-
+// ==== Création nuancier rectangulaire ==== 
 function drawPalette() {
-  const len = paletteColors.length;
-  for (let i=0; i<len; i++) {
-    const angle = (i / len) * Math.PI * 2;
-    const x = cx + radius * Math.cos(angle);
-    const y = cy + radius * Math.sin(angle);
-    paletteCtx.beginPath();
-    paletteCtx.arc(x, y, 15, 0, Math.PI*2);
-    paletteCtx.fillStyle = paletteColors[i];
-    paletteCtx.fill();
+  const width = paletteCanvas.width;
+  const height = paletteCanvas.height;
+  const imageData = paletteCtx.createImageData(width, height);
+
+  for(let y=0; y<height; y++){
+    for(let x=0; x<width; x++){
+      const hue = x / width * 360;
+      const sat = 100;
+      const light = 100 - (y / height * 50);
+      const color = hslToRgb(hue, sat, light);
+      const index = (y*width + x)*4;
+      imageData.data[index] = color.r;
+      imageData.data[index+1] = color.g;
+      imageData.data[index+2] = color.b;
+      imageData.data[index+3] = 255;
+    }
   }
+  paletteCtx.putImageData(imageData,0,0);
+}
+
+// HSL -> RGB
+function hslToRgb(h, s, l) {
+  s /= 100;
+  l /= 100;
+  const k = n => (n + h/30) % 12;
+  const a = s * Math.min(l, 1-l);
+  const f = n => l - a * Math.max(-1, Math.min(k(n)-3, Math.min(9-k(n),1)));
+  return { r: Math.round(255*f(0)), g: Math.round(255*f(8)), b: Math.round(255*f(4)) };
 }
 drawPalette();
 
@@ -154,27 +169,14 @@ paletteCanvas.addEventListener("click", e => {
   const rect = paletteCanvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
-  let closestDist = Infinity;
-  let chosenColor = currentColor;
+  const data = paletteCtx.getImageData(x, y, 1, 1).data;
+  currentColor = `rgb(${data[0]},${data[1]},${data[2]})`;
 
-  paletteColors.forEach(c => {
-    // retrouver coordonnées du cercle de cette couleur
-    const i = paletteColors.indexOf(c);
-    const angle = (i / paletteColors.length) * Math.PI * 2;
-    const cxCol = cx + radius * Math.cos(angle);
-    const cyCol = cy + radius * Math.sin(angle);
-    const dist = Math.hypot(x - cxCol, y - cyCol);
-    if(dist < closestDist) {
-      closestDist = dist;
-      chosenColor = c;
-      paletteIndicator.style.left = cxCol + "px";
-      paletteIndicator.style.top = cyCol + "px";
-    }
-  });
-  currentColor = chosenColor;
+  paletteIndicator.style.left = x + "px";
+  paletteIndicator.style.top  = y + "px";
 });
 
-// ==== Mouvement souris ====
+// ==== Mouvement souris pour loupe ====
 const frame = document.getElementById("frame");
 frame.addEventListener("mousemove", e => {
     const rect = canvas.getBoundingClientRect();
@@ -195,12 +197,10 @@ frame.addEventListener("mousemove", e => {
     const key = x + "," + y;
     targetPixel = usedPixels.has(key) ? null : {x, y};
 
-    // Position loupe
     loupe.style.display = "block";
     loupe.style.left = (centerX - loupe.offsetWidth/2) + "px";
     loupe.style.top  = (centerY - loupe.offsetHeight/2) + "px";
 
-    // Affichage loupe zoomée
     loupeCtx.clearRect(0,0,64,64);
     loupeCtx.imageSmoothingEnabled = false;
 
