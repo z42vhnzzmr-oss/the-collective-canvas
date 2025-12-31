@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Place your pixel</title>
+<title>Place your pixel — Premium Canvas Immersive</title>
 <style>
 body {
   margin: 0;
@@ -11,43 +11,61 @@ body {
   background: #0b0b0b;
   color: #fff;
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   height: 100vh;
   overflow: hidden;
 }
 
-/* Cadre canevas avec léger effet néon */
+/* Conteneur principal */
+#container {
+  display: flex;
+  align-items: flex-start;
+  gap: 30px;
+}
+
+/* Canevas avec cadre néon animé */
 #frame {
   position: relative;
   width: 750px;
   height: 750px;
-  border: 2px solid #ffffff33;
-  box-shadow: 0 0 20px #fff2, 0 0 40px #fff1;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 20px #fff, 0 0 50px #ffffff33;
   background: #111;
   cursor: none;
   overflow: hidden;
+  animation: pulseBorder 3s infinite alternate;
 }
 
-/* Canvas */
+@keyframes pulseBorder {
+  0% { box-shadow: 0 0 15px #fff, 0 0 40px #ffffff33; }
+  100% { box-shadow: 0 0 25px #fff, 0 0 60px #ffffff55; }
+}
+
+/* Canvas principal */
 canvas {
   width: 100%;
   height: 100%;
   image-rendering: pixelated;
 }
 
-/* Loupe avec petit néon blanc */
+/* Loupe avec animation néon */
 #loupe {
   position: absolute;
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.7);
-  box-shadow: 0 0 8px #fff, 0 0 20px #fff2;
+  border: 2px solid #fff;
+  box-shadow: 0 0 10px #fff, 0 0 20px #ffffff33;
   pointer-events: none;
   overflow: hidden;
   display: none;
-  z-index: 10;
+  animation: pulseLoupe 1.5s infinite alternate;
+}
+
+@keyframes pulseLoupe {
+  0% { box-shadow: 0 0 8px #fff, 0 0 15px #ffffff33; }
+  100% { box-shadow: 0 0 15px #fff, 0 0 25px #ffffff55; }
 }
 
 #loupe canvas {
@@ -56,71 +74,99 @@ canvas {
   image-rendering: pixelated;
 }
 
+/* Centre du rond de la loupe */
 #centerDot {
   position: absolute;
   width: 4px;
   height: 4px;
-  background: white;
+  background: #fff;
   border-radius: 50%;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  box-shadow: 0 0 4px #fff, 0 0 8px #fff2;
+  box-shadow: 0 0 6px #fff;
 }
 
-/* Palette élégante */
+/* Palette de couleurs premium */
 #palette {
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 140px;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  grid-gap: 12px;
-  z-index: 10;
+  grid-template-columns: repeat(2, 32px);
+  grid-auto-rows: 32px;
+  gap: 12px;
+  background: #111;
+  padding: 15px;
+  border-radius: 12px;
+  box-shadow: 0 0 25px #ffffff33;
 }
 
+/* Chaque couleur */
 .color {
-  width: 48px;
-  height: 48px;
   border-radius: 50%;
   border: 2px solid rgba(255,255,255,0.2);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.25s ease;
+}
+
+.color:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 12px #fff;
 }
 
 .color.active {
-  border: 2px solid #fff;
-  box-shadow: 0 0 10px #fff, 0 0 20px currentColor;
+  border-color: #fff;
+  box-shadow: 0 0 12px #fff;
 }
 
 /* Compteur pixels */
 #counter {
-  position: absolute;
-  bottom: 10px;
-  right: 10px;
+  margin-top: 20px;
+  text-align: center;
   font-size: 16px;
-  color: #fff9;
-  background: #0004;
-  padding: 6px 12px;
-  border-radius: 12px;
-  z-index: 10;
+  color: #ccc;
+  transition: transform 0.2s ease;
+}
+
+/* Bouton validation */
+#validateBtn {
+  margin-top: 15px;
+  width: 100%;
+  padding: 10px;
+  background: transparent;
+  border: 1px solid #fff;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+#validateBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+#validateBtn:hover:not(:disabled) {
+  background: #fff;
+  color: #000;
 }
 </style>
 </head>
 <body>
 
-<div id="frame">
-  <canvas id="canvas" width="1000" height="1000"></canvas>
-
-  <div id="loupe">
-    <canvas id="loupeCanvas" width="64" height="64"></canvas>
-    <div id="centerDot"></div>
+<div id="container">
+  <!-- Palette + compteur + validation -->
+  <div>
+    <div id="palette"></div>
+    <div id="counter">Pixels restants : <span id="pixelsCount">5</span></div>
+    <button id="validateBtn" disabled>VALIDER</button>
   </div>
 
-  <div id="palette"></div>
-  <div id="counter">Pixels restants : <span id="pixelsRemaining">50</span></div>
+  <!-- Canvas -->
+  <div id="frame">
+    <canvas id="canvas" width="1000" height="1000"></canvas>
+    <div id="loupe">
+      <canvas id="loupeCanvas" width="64" height="64"></canvas>
+      <div id="centerDot"></div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -131,29 +177,30 @@ const loupe = document.getElementById("loupe");
 const loupeCanvas = document.getElementById("loupeCanvas");
 const loupeCtx = loupeCanvas.getContext("2d");
 const paletteEl = document.getElementById("palette");
-const counterEl = document.getElementById("pixelsRemaining");
+const validateBtn = document.getElementById("validateBtn");
+const pixelsCountEl = document.getElementById("pixelsCount");
 
-let pixelsRemaining = 50;
+let pixelsRemaining = 5; 
 let currentColor = "#ffffff";
 let targetPixel = null;
 const usedPixels = new Set();
-const zoom = 4;
+const zoom = 4; 
 
-// ==== Palette couleurs ====
+// ==== Couleurs premium ====
 const colors = [
-  "#ffffff","#f0f0f0","#d4af37","#ff003c","#ff7a00",
-  "#ffd400","#00ff9c","#00c3ff","#5b5bff","#b000ff",
-  "#ff00c8","#8b4513","#222222","#ffb6c1","#00fa9a"
+  "#ffffff","#ffd700","#ff6f61","#ff4500","#ff69b4",
+  "#8a2be2","#4b0082","#00ffff","#1e90ff","#32cd32",
+  "#a52a2a","#000000"
 ];
 
-colors.forEach(c => {
+colors.forEach(color => {
   const div = document.createElement("div");
   div.className = "color";
-  div.style.background = c;
+  div.style.background = color;
   div.addEventListener("click", () => {
-    document.querySelectorAll(".color").forEach(el=>el.classList.remove("active"));
+    document.querySelectorAll(".color").forEach(c=>c.classList.remove("active"));
     div.classList.add("active");
-    currentColor = c;
+    currentColor = color;
   });
   paletteEl.appendChild(div);
 });
@@ -171,49 +218,66 @@ frame.addEventListener("mousemove", e => {
   let x = Math.floor(centerX * scaleX);
   let y = Math.floor(centerY * scaleY);
 
-  if (x < 0) x = 0;
-  if (y < 0) y = 0;
-  if (x >= canvas.width) x = canvas.width-1;
-  if (y >= canvas.height) y = canvas.height-1;
+  if(x<0) x=0;
+  if(y<0) y=0;
+  if(x>=canvas.width) x=canvas.width-1;
+  if(y>=canvas.height) y=canvas.height-1;
 
-  const key = x + "," + y;
+  const key = x+","+y;
   targetPixel = usedPixels.has(key) ? null : {x, y};
 
-  // Loupe
   loupe.style.display = "block";
   loupe.style.left = (centerX - loupe.offsetWidth/2) + "px";
-  loupe.style.top = (centerY - loupe.offsetHeight/2) + "px";
+  loupe.style.top  = (centerY - loupe.offsetHeight/2) + "px";
 
   loupeCtx.clearRect(0,0,64,64);
   loupeCtx.imageSmoothingEnabled = false;
 
   let sx = x - 8;
   let sy = y - 8;
-  if (sx < 0) sx = 0;
-  if (sy < 0) sy = 0;
+  if(sx <0) sx=0;
+  if(sy<0) sy=0;
   let sw = 16;
   let sh = 16;
-  if (sx + sw > canvas.width) sw = canvas.width - sx;
-  if (sy + sh > canvas.height) sh = canvas.height - sy;
+  if(sx+sw > canvas.width) sw = canvas.width - sx;
+  if(sy+sh > canvas.height) sh = canvas.height - sy;
 
   loupeCtx.drawImage(canvas, sx, sy, sw, sh, 0, 0, loupeCanvas.width, loupeCanvas.height);
 });
 
-// ==== Click pour poser pixel ====
+// ==== Click sélection pixel ====
 frame.addEventListener("click", e => {
-  if (!targetPixel || pixelsRemaining <= 0) return;
-  const key = targetPixel.x + "," + targetPixel.y;
-  if (usedPixels.has(key)) return;
+  if(!targetPixel || pixelsRemaining<=0) return;
+  validateBtn.disabled = false;
+});
 
+// ==== Validation pixel ====
+validateBtn.addEventListener("click", () => {
+  if(!targetPixel || pixelsRemaining<=0) return;
+  const key = targetPixel.x + "," + targetPixel.y;
+  if(usedPixels.has(key)) return;
+
+  // Animation glow
   ctx.fillStyle = currentColor;
   ctx.fillRect(targetPixel.x, targetPixel.y,1,1);
+  ctx.shadowColor = currentColor;
+  ctx.shadowBlur = 5;
+  ctx.fillRect(targetPixel.x, targetPixel.y,1,1);
+  ctx.shadowBlur = 0;
+
   usedPixels.add(key);
 
   pixelsRemaining--;
-  counterEl.textContent = pixelsRemaining;
+  pixelsCountEl.textContent = pixelsRemaining;
+
+  // Compteur animation pop
+  pixelsCountEl.parentNode.style.transform = "scale(1.3)";
+  setTimeout(()=>pixelsCountEl.parentNode.style.transform = "scale(1)",150);
+
+  targetPixel = null;
+  validateBtn.disabled = true;
 });
 </script>
 
 </body>
 </html>
-
