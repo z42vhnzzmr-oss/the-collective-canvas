@@ -11,7 +11,6 @@ body {
   background: #0b0b0b;
   color: #fff;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   height: 100vh;
@@ -21,7 +20,7 @@ body {
 /* Cadre canevas */
 #frame {
   position: relative;
-  width: 750px; /* dézoom pour voir l'ensemble */
+  width: 750px;
   height: 750px;
   border: 2px solid rgba(255,255,255,0.3);
   background: #111;
@@ -30,7 +29,7 @@ body {
 }
 
 canvas {
-  width: 100%; /* dézoom visuel */
+  width: 100%;
   height: 100%;
   image-rendering: pixelated;
 }
@@ -38,7 +37,7 @@ canvas {
 /* Loupe */
 #loupe {
   position: absolute;
-  width: 64px;  /* ~2cm */
+  width: 64px;
   height: 64px;
   border-radius: 50%;
   border: 2px solid rgba(255,255,255,0.7);
@@ -53,7 +52,7 @@ canvas {
   image-rendering: pixelated;
 }
 
-/* petit rond centre de loupe */
+/* Petit rond centre de loupe */
 #centerDot {
   position: absolute;
   width: 4px;
@@ -88,8 +87,7 @@ let currentColor = "#ffffff"; // couleur par défaut
 let pixelsRemaining = 50;
 let targetPixel = null;
 const usedPixels = new Set();
-
-const zoom = 4; // x4 dans la loupe
+const zoom = 4; // zoom x4 dans la loupe
 
 // ==== Mouvement souris ====
 const frame = document.getElementById("frame");
@@ -99,8 +97,12 @@ frame.addEventListener("mousemove", e => {
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
 
-    let x = Math.floor((e.clientX - rect.left) * scaleX);
-    let y = Math.floor((e.clientY - rect.top) * scaleY);
+    // Centre du rond de la loupe
+    let centerX = e.clientX - rect.left;
+    let centerY = e.clientY - rect.top;
+
+    let x = Math.floor(centerX * scaleX);
+    let y = Math.floor(centerY * scaleY);
 
     if (x < 0) x = 0;
     if (y < 0) y = 0;
@@ -112,28 +114,31 @@ frame.addEventListener("mousemove", e => {
 
     // Position loupe
     loupe.style.display = "block";
-    loupe.style.left = (e.clientX - rect.left - loupe.offsetWidth/2) + "px";
-    loupe.style.top = (e.clientY - rect.top - loupe.offsetHeight/2) + "px";
+    loupe.style.left = (centerX - loupe.offsetWidth/2) + "px";
+    loupe.style.top  = (centerY - loupe.offsetHeight/2) + "px";
 
     // Affichage loupe zoomée
     loupeCtx.clearRect(0,0,64,64);
     loupeCtx.imageSmoothingEnabled = false;
+
+    // zone 16x16 autour du pixel central pour zoom
     let sx = x - 8;
     let sy = y - 8;
     if (sx < 0) sx = 0;
     if (sy < 0) sy = 0;
     let sw = 16;
     let sh = 16;
-    if (sx+sw > canvas.width) sw = canvas.width - sx;
-    if (sy+sh > canvas.height) sh = canvas.height - sy;
+    if (sx + sw > canvas.width) sw = canvas.width - sx;
+    if (sy + sh > canvas.height) sh = canvas.height - sy;
+
     loupeCtx.drawImage(canvas, sx, sy, sw, sh, 0, 0, loupeCanvas.width, loupeCanvas.height);
 });
 
 // ==== Click pour poser pixel ====
 frame.addEventListener("click", e => {
-    if(!targetPixel || pixelsRemaining <=0) return;
+    if (!targetPixel || pixelsRemaining <=0) return;
     const key = targetPixel.x + "," + targetPixel.y;
-    if(usedPixels.has(key)) return;
+    if (usedPixels.has(key)) return;
 
     ctx.fillStyle = currentColor;
     ctx.fillRect(targetPixel.x, targetPixel.y,1,1);
@@ -144,3 +149,4 @@ frame.addEventListener("click", e => {
 
 </body>
 </html>
+
