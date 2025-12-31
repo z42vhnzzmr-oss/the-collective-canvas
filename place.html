@@ -11,25 +11,55 @@ body {
   background: #0b0b0b;
   color: #fff;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   height: 100vh;
-  overflow: hidden;
+  padding-top: 20px;
 }
 
-/* Container pour nuancier + canevas */
+/* Conteneur principal */
 #container {
   display: flex;
-  align-items: flex-start;
-  justify-content: flex-start;
-  gap: 30px;
-  padding-left: 40px;
+  gap: 20px;
+}
+
+/* Nuancier et compteur */
+#sidebar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+/* Nuancier */
+.palette {
+  display: grid;
+  grid-template-columns: repeat(2, 36px);
+  gap: 10px;
+}
+
+.color {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.2);
+  cursor: pointer;
+}
+
+.color.active {
+  border: 2px solid #fff;
+  box-shadow: 0 0 10px currentColor;
+}
+
+/* Compteur */
+#counter {
+  font-size: 18px;
 }
 
 /* Cadre canevas */
 #frame {
   position: relative;
-  width: 750px; 
+  width: 750px;
   height: 750px;
   border: 2px solid rgba(255,255,255,0.3);
   background: #111;
@@ -37,6 +67,7 @@ body {
   overflow: hidden;
 }
 
+/* Canvas */
 canvas {
   width: 100%;
   height: 100%;
@@ -73,24 +104,146 @@ canvas {
   transform: translate(-50%, -50%);
 }
 
-/* Nuancier élégant vertical */
-#palette {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 10px;
-}
-
-.color {
-  width: 36px;
-  height: 36px;
-  border-radius: 6px;
-  border: 2px solid rgba(255,255,255,0.2);
+/* Bouton Valider */
+#validate {
+  margin-top: 20px;
+  padding: 10px 20px;
+  font-size: 16px;
+  border: 1px solid #fff;
+  background: transparent;
+  color: #fff;
   cursor: pointer;
-  transition: all 0.3s;
 }
 
-.color.active {
-  border-color: #ff
+#validate:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+</style>
+</head>
+<body>
+
+<div id="container">
+
+  <div id="sidebar">
+    <div class="palette" id="palette"></div>
+    <div id="counter">Pixels restants : 50</div>
+  </div>
+
+  <div id="frame">
+    <canvas id="canvas" width="1000" height="1000"></canvas>
+    <div id="loupe">
+      <canvas id="loupeCanvas" width="64" height="64"></canvas>
+      <div id="centerDot"></div>
+    </div>
+    <button id="validate" disabled>Valider</button>
+  </div>
+
+</div>
+
+<script>
+// ==== Variables ====
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const loupe = document.getElementById("loupe");
+const loupeCanvas = document.getElementById("loupeCanvas");
+const loupeCtx = loupeCanvas.getContext("2d");
+const validateBtn = document.getElementById("validate");
+const counterEl = document.getElementById("counter");
+const paletteEl = document.getElementById("palette");
+
+let currentColor = "#ffffff"; 
+let pixelsRemaining = 50; // À mettre selon l'achat réel
+let targetPixel = null;
+let pendingPixel = null;
+const usedPixels = new Set();
+const zoom = 4;
+
+// ==== Nuancier ====
+const colors = ["#ffffff","#d4af37","#ff003c","#ff7a00","#ffd400","#00ff9c","#00c3ff","#5b5bff","#b000ff","#ff00c8","#8b4513","#222222"];
+colors.forEach(c => {
+  const el = document.createElement("div");
+  el.className = "color";
+  el.style.background = c;
+  el.addEventListener("click", () => {
+    document.querySelectorAll(".color").forEach(d => d.classList.remove("active"));
+    el.classList.add("active");
+    currentColor = c;
+  });
+  paletteEl.appendChild(el);
+});
+
+// ==== Mouvement souris ====
+const frame = document.getElementById("frame");
+frame.addEventListener("mousemove", e => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    let centerX = e.clientX - rect.left;
+    let centerY = e.clientY - rect.top;
+
+    let x = Math.floor(centerX * scaleX);
+    let y = Math.floor(centerY * scaleY);
+
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
+    if (x >= canvas.width) x = canvas.width-1;
+    if (y >= canvas.height) y = canvas.height-1;
+
+    const key = x + "," + y;
+    targetPixel = usedPixels.has(key) ? null : {x, y};
+    pendingPixel = targetPixel;
+
+    // Loupe
+    loupe.style.display = "block";
+    loupe.style.left = (centerX - loupe.offsetWidth/2) + "px";
+    loupe.style.top  = (centerY - loupe.offsetHeight/2) + "px";
+
+    loupeCtx.clearRect(0,0,64,64);
+    loupeCtx.imageSmoothingEnabled = false;
+
+    let sx = x - 8;
+    let sy = y - 8;
+    if (sx < 0) sx = 0;
+    if (sy < 0) sy = 0;
+    let sw = 16;
+    let sh = 16;
+    if (sx + sw > canvas.width) sw = canvas.width - sx;
+    if (sy + sh > canvas.height) sh = canvas.height - sy;
+
+    loupeCtx.drawImage(canvas, sx, sy, sw, sh, 0, 0, loupeCanvas.width, loupeCanvas.height);
+});
+
+// ==== Click pour activer validation ====
+frame.addEventListener("click", e => {
+  if (!pendingPixel || !currentColor || pixelsRemaining <=0) return;
+  validateBtn.disabled = false;
+});
+
+// ==== Validation pixel ====
+validateBtn.addEventListener("click", () => {
+  if (!pendingPixel) return;
+  const key = pendingPixel.x + "," + pendingPixel.y;
+  if (usedPixels.has(key)) return;
+
+  ctx.fillStyle = currentColor;
+  ctx.fillRect(pendingPixel.x, pendingPixel.y, 1, 1);
+  usedPixels.add(key);
+  pixelsRemaining--;
+  counterEl.textContent = "Pixels restants : " + pixelsRemaining;
+
+  pendingPixel = null;
+  validateBtn.disabled = true;
+
+  if (pixelsRemaining <= 0) {
+    validateBtn.disabled = true;
+  }
+});
+</script>
+
+</body>
+</html>
+
 
 
