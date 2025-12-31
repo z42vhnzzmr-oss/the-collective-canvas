@@ -18,32 +18,30 @@ body {
   overflow: hidden;
 }
 
-/* Cadre canevas avec effet néon */
+/* Cadre canevas */
 #frame {
   position: relative;
-  width: 750px; 
+  width: 750px; /* dézoom pour voir l'ensemble */
   height: 750px;
-  border: 2px solid #00ffff;
-  box-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff33;
+  border: 2px solid rgba(255,255,255,0.3);
   background: #111;
   cursor: none;
   overflow: hidden;
 }
 
 canvas {
-  width: 100%; 
+  width: 100%; /* dézoom visuel */
   height: 100%;
   image-rendering: pixelated;
 }
 
-/* Loupe néon */
+/* Loupe */
 #loupe {
   position: absolute;
-  width: 64px;
+  width: 64px;  /* ~2cm */
   height: 64px;
   border-radius: 50%;
-  border: 2px solid #ff00ff;
-  box-shadow: 0 0 10px #ff00ff, 0 0 20px #ff00ff33;
+  border: 2px solid rgba(255,255,255,0.7);
   pointer-events: none;
   overflow: hidden;
   display: none;
@@ -55,17 +53,16 @@ canvas {
   image-rendering: pixelated;
 }
 
-/* Petit point centre loupe avec glow */
+/* petit rond centre de loupe */
 #centerDot {
   position: absolute;
-  width: 6px;
-  height: 6px;
-  background: #ffffff;
+  width: 4px;
+  height: 4px;
+  background: white;
   border-radius: 50%;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  box-shadow: 0 0 5px #fff, 0 0 10px #ff00ff66;
 }
 </style>
 </head>
@@ -87,12 +84,12 @@ const loupe = document.getElementById("loupe");
 const loupeCanvas = document.getElementById("loupeCanvas");
 const loupeCtx = loupeCanvas.getContext("2d");
 
-let currentColor = "#ffffff";
+let currentColor = "#ffffff"; // couleur par défaut
 let pixelsRemaining = 50;
 let targetPixel = null;
 const usedPixels = new Set();
 
-const zoom = 4;
+const zoom = 4; // x4 dans la loupe
 
 // ==== Mouvement souris ====
 const frame = document.getElementById("frame");
@@ -116,12 +113,11 @@ frame.addEventListener("mousemove", e => {
     // Position loupe
     loupe.style.display = "block";
     loupe.style.left = (e.clientX - rect.left - loupe.offsetWidth/2) + "px";
-    loupe.style.top  = (e.clientY - rect.top - loupe.offsetHeight/2) + "px";
+    loupe.style.top = (e.clientY - rect.top - loupe.offsetHeight/2) + "px";
 
-    // Zoom dans la loupe
+    // Affichage loupe zoomée
     loupeCtx.clearRect(0,0,64,64);
     loupeCtx.imageSmoothingEnabled = false;
-
     let sx = x - 8;
     let sy = y - 8;
     if (sx < 0) sx = 0;
@@ -130,7 +126,6 @@ frame.addEventListener("mousemove", e => {
     let sh = 16;
     if (sx+sw > canvas.width) sw = canvas.width - sx;
     if (sy+sh > canvas.height) sh = canvas.height - sy;
-
     loupeCtx.drawImage(canvas, sx, sy, sw, sh, 0, 0, loupeCanvas.width, loupeCanvas.height);
 });
 
